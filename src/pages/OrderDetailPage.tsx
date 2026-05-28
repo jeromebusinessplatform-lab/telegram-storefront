@@ -7,7 +7,7 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import ReceiptModal from '@/components/common/ReceiptModal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, Image as ImageIcon, Truck } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Truck, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrderDetailPage() {
@@ -88,6 +88,15 @@ export default function OrderDetailPage() {
     }
   };
 
+  const copyOrderNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(order.order_number);
+      toast({ description: 'Order number copied.' });
+    } catch {
+      toast({ description: 'Copy failed. Please try again.', variant: 'destructive' });
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout showBack title="Order Details">
@@ -125,7 +134,19 @@ export default function OrderDetailPage() {
               <p className="font-black text-base text-primary">{order.order_number}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(order.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
             </div>
-            <OrderStatusBadge status={order.status} size="md" />
+            <div className="flex flex-col items-end gap-2">
+              <OrderStatusBadge status={order.status} size="md" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyOrderNumber}
+                className="h-6 px-2 text-[10px] gap-1 border-primary/30 text-primary"
+              >
+                <Copy className="w-3 h-3" />
+                Copy
+              </Button>
+            </div>
           </div>
         </div>
 

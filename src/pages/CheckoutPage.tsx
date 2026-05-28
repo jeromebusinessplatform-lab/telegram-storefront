@@ -9,13 +9,7 @@ import { PaymentMethod, DeliveryProvider, FeeConfig, AppliedFee, Voucher, Checko
 import { CreditCard, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddressSection from '@/components/common/AddressSection';
-
-function generateOrderNumber(): string {
-  const now = new Date();
-  const date = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  const rand = Math.random().toString(36).substring(2,7).toUpperCase();
-  return `ORD-${date}-${rand}`;
-}
+import { generateOrderNumber } from '@/lib/order-number';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
 
