@@ -15,6 +15,7 @@ const ALL_STATUSES: { value: string; label: string }[] = [
   { value: 'payment_submitted', label: 'Payment Submitted' },
   { value: 'payment_verified', label: 'Verified' },
   { value: 'processing', label: 'Processing' },
+  { value: 'dispatched', label: 'Dispatched' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },

@@ -203,6 +203,7 @@ export type OrderStatus =
   | 'payment_submitted'
   | 'payment_verified'
   | 'processing'
+  | 'dispatched'
   | 'shipped'
   | 'delivered'
   | 'cancelled';
@@ -236,6 +237,7 @@ export interface Order {
   voucher_discount: number;
   delivery_fee: number;
   delivery_provider_id?: string;
+  delivery_tracking_url?: string | null;
   total: number;
   status: OrderStatus;
   payment_method_id?: string;

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Plus, ChevronRight } from 'lucide-react';
+import { MessageCircle, Plus, ChevronRight, Paperclip } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -32,7 +32,28 @@ export default function SupportPage() {
   const [showNew, setShowNew] = useState(false);
   const [subject, setSubject] = useState('');
   const [firstMessage, setFirstMessage] = useState('');
+  const [firstAttachments, setFirstAttachments] = useState<File[]>([]);
+  const [firstAttachmentPreviews, setFirstAttachmentPreviews] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+
+  const uploadAttachments = async (ticketId: string, files: File[]) => {
+    if (files.length === 0) return [];
+    const uploads = await Promise.all(
+      files.map(async (file) => {
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const filePath = `support-attachments/${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const { error } = await supabase.storage.from('support-attachments').upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type || 'image/jpeg',
+          upsert: false,
+        });
+        if (error) throw error;
+        const { data } = supabase.storage.from('support-attachments').getPublicUrl(filePath);
+        return data.publicUrl;
+      })
+    );
+    return uploads;
+  };
 
   useEffect(() => {
     if (!customer?.id) { setIsLoading(false); return; }
@@ -60,15 +81,19 @@ export default function SupportPage() {
       }).select().maybeSingle();
 
       if (ticket) {
+        const attachments = await uploadAttachments(ticket.id, firstAttachments);
         await supabase.from('support_messages').insert({
           ticket_id: ticket.id,
           sender_type: 'customer',
           message: firstMessage.trim(),
+          attachments,
         });
         setTickets(p => [ticket as unknown as SupportTicket, ...p]);
         setShowNew(false);
         setSubject('');
         setFirstMessage('');
+        setFirstAttachments([]);
+        setFirstAttachmentPreviews([]);
         navigate(`/support/${ticket.id}`);
       }
     } catch {
@@ -137,6 +162,31 @@ export default function SupportPage() {
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Message</label>
                 <Textarea value={firstMessage} onChange={e => setFirstMessage(e.target.value)} placeholder="Describe your issue in detail..." className="mt-1 text-sm resize-none h-24" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Attachments</label>
+                <label className="mt-1 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-center hover:border-primary/50">
+                  <Paperclip className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Add up to a few images</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={e => {
+                      const files = Array.from(e.target.files ?? []);
+                      setFirstAttachments(files);
+                      setFirstAttachmentPreviews(files.map(file => URL.createObjectURL(file)));
+                    }}
+                  />
+                </label>
+                {firstAttachmentPreviews.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {firstAttachmentPreviews.map((src, index) => (
+                      <img key={src + index} src={src} alt={`attachment ${index + 1}`} className="h-20 w-full rounded-lg object-cover" />
+                    ))}
+                  </div>
+                )}
               </div>
               <Button onClick={createTicket} disabled={isCreating} className="w-full btn-gradient font-bold">
                 {isCreating ? 'Creating...' : 'Submit Ticket'}

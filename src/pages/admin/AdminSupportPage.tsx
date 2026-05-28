@@ -120,6 +120,15 @@ export default function AdminSupportPage() {
                 <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${msg.sender_type === 'admin' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border rounded-bl-sm'}`}>
                   {msg.sender_type === 'customer' && <p className="text-[10px] font-bold text-primary mb-0.5">{customer?.telegram_first_name}</p>}
                   <p className="text-sm">{msg.message}</p>
+                  {msg.attachments?.length > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {msg.attachments.map((attachment, index) => (
+                        <a key={attachment + index} href={attachment} target="_blank" rel="noreferrer">
+                          <img src={attachment} alt={`attachment ${index + 1}`} className="h-24 w-full rounded-lg object-cover border border-border/50" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   <p className={`text-[10px] mt-0.5 ${msg.sender_type === 'admin' ? 'text-white/60' : 'text-muted-foreground'}`}>{new Date(msg.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>

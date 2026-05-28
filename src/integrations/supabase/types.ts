@@ -3308,6 +3308,7 @@ export type Database = {
           customer_id: string | null
           delivery_fee: number | null
           delivery_provider_id: string | null
+          delivery_tracking_url: string | null
           fees_applied: Json | null
           id: string
           items: Json
@@ -3330,6 +3331,7 @@ export type Database = {
           customer_id?: string | null
           delivery_fee?: number | null
           delivery_provider_id?: string | null
+          delivery_tracking_url?: string | null
           fees_applied?: Json | null
           id?: string
           items?: Json
@@ -3352,6 +3354,7 @@ export type Database = {
           customer_id?: string | null
           delivery_fee?: number | null
           delivery_provider_id?: string | null
+          delivery_tracking_url?: string | null
           fees_applied?: Json | null
           id?: string
           items?: Json

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, ReceiptFieldsConfig } from '@/types';
@@ -7,12 +7,11 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import ReceiptModal from '@/components/common/ReceiptModal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -111,8 +110,10 @@ export default function OrderDetailPage() {
   }
 
   const paymentMethod = order.payment_methods as unknown as {name: string; type: string; details: {qr_image?: string; instructions?: string}} | null;
+  const trackingUrl = order.delivery_tracking_url?.trim() ?? '';
   const usesManualQrPayment = paymentMethod?.type === 'qrph' || paymentMethod?.type === 'custom';
   const needsProof = usesManualQrPayment && order.status === 'pending';
+  const canTrackCourier = order.status === 'dispatched' && !!trackingUrl;
 
   return (
     <AppLayout showBack title="Order Details">
@@ -203,6 +204,23 @@ export default function OrderDetailPage() {
                 <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </label>
             )}
+          </div>
+        )}
+
+        {canTrackCourier && (
+          <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Truck className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Live Courier Tracking</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Your order is dispatched. Tap the button below to view the courier tracking link.
+            </p>
+            <Button asChild className="w-full btn-gradient font-semibold">
+              <a href={trackingUrl} target="_blank" rel="noreferrer">
+                Track Courier
+              </a>
+            </Button>
           </div>
         )}
 

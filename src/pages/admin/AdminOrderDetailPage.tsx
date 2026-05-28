@@ -18,6 +18,7 @@ const STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'payment_submitted', label: 'Payment Submitted' },
   { value: 'payment_verified', label: 'Payment Verified' },
   { value: 'processing', label: 'Processing' },
+  { value: 'dispatched', label: 'Dispatched' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -30,6 +31,7 @@ export default function AdminOrderDetailPage() {
   const [status, setStatus] = useState<OrderStatus>('pending');
   const [notes, setNotes] = useState('');
   const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<string>('');
+  const [deliveryTrackingUrl, setDeliveryTrackingUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
 
@@ -42,6 +44,7 @@ export default function AdminOrderDetailPage() {
         setStatus(ord.status);
         setNotes(ord.notes ?? '');
         setDeliveryFeeOverride(String(ord.delivery_fee ?? 0));
+        setDeliveryTrackingUrl(ord.delivery_tracking_url ?? '');
       }
     });
   }, [id]);
@@ -53,7 +56,13 @@ export default function AdminOrderDetailPage() {
     const newDeliveryFee = parseFloat(deliveryFeeOverride) || order.delivery_fee;
     const feeDiff = newDeliveryFee - order.delivery_fee;
     const newTotal = Math.max(0, order.total + feeDiff);
-    await supabase.from('orders').update({ status, notes, delivery_fee: newDeliveryFee, total: newTotal }).eq('id', order.id);
+    await supabase.from('orders').update({
+      status,
+      notes,
+      delivery_fee: newDeliveryFee,
+      total: newTotal,
+      delivery_tracking_url: deliveryTrackingUrl.trim() || null,
+    }).eq('id', order.id);
 
     // Handle referral rewards on first delivery
     if (status === 'delivered' && order.status !== 'delivered') {
@@ -103,23 +112,31 @@ export default function AdminOrderDetailPage() {
     // Send notification to customer
     if (order.customers) {
       const cust = order.customers as {telegram_id: string; id: string};
+      const trackingLink = deliveryTrackingUrl.trim();
+      const trackingNote = status === 'dispatched' && trackingLink
+        ? ` Live tracking: ${trackingLink}`
+        : '';
       await supabase.from('notifications').insert({
         customer_id: cust.id,
         title: `Order ${order.order_number} Update`,
-        message: `Your order status has been updated to: ${status.replace(/_/g, ' ')}`,
+        message: `Your order status has been updated to: ${status.replace(/_/g, ' ')}.${trackingNote}`,
         type: 'order',
       });
       // Try to send Telegram notification
       try {
         await supabase.functions.invoke('send-telegram-notification', {
-          body: { telegram_id: cust.telegram_id, message: `Order ${order.order_number} update: ${status.replace(/_/g, ' ')}`, notification_data: { type: 'order', order_id: order.id } },
+          body: {
+            telegram_id: cust.telegram_id,
+            message: `Order ${order.order_number} update: ${status.replace(/_/g, ' ')}.${trackingNote}`,
+            notification_data: { type: 'order', order_id: order.id },
+          },
         });
       } catch (e) {
         console.warn("Telegram notify failed", e);
       }
     }
 
-    setOrder(p => p ? { ...p, status, notes, delivery_fee: newDeliveryFee, total: newTotal } : p);
+    setOrder(p => p ? { ...p, status, notes, delivery_fee: newDeliveryFee, total: newTotal, delivery_tracking_url: deliveryTrackingUrl.trim() || null } : p);
     toast({ description: 'Order updated and customer notified!' });
     setIsSaving(false);
   };
@@ -138,6 +155,7 @@ export default function AdminOrderDetailPage() {
   const paymentMethod = order.payment_methods as {name: string; type: string} | null;
   const deliveryProvider = order.delivery_providers as {name: string} | null;
   const shippingAddr = order.shipping_address;
+  const isDispatched = status === 'dispatched';
 
   return (
     <AdminLayout title={`Order ${order.order_number}`}>
@@ -239,6 +257,21 @@ export default function AdminOrderDetailPage() {
             {deliveryProvider && <div className="flex justify-between"><span className="text-muted-foreground">Delivery</span><span>{deliveryProvider.name}</span></div>}
           </div>
         </div>
+
+        {isDispatched && (
+          <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm">
+            <h3 className="text-sm font-bold mb-2">Courier Tracking Link</h3>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Paste the courier or live tracking link here. The customer Track button will appear once the order is saved as Dispatched.
+            </p>
+            <Input
+              value={deliveryTrackingUrl}
+              onChange={e => setDeliveryTrackingUrl(e.target.value)}
+              placeholder="https://..."
+              className="h-9 text-sm"
+            />
+          </div>
+        )}
 
         {/* Notes */}
         <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm">
