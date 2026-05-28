@@ -1,6 +1,7 @@
 import { AnnouncementConfig } from '@/types';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
 import { Megaphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AnnouncementBannerProps {
   announcement: AnnouncementConfig;
@@ -9,12 +10,31 @@ interface AnnouncementBannerProps {
 export default function AnnouncementBanner({ announcement }: AnnouncementBannerProps) {
   const shouldShowImage = Boolean(announcement.banner_image_url) && announcement.display_mode !== 'text';
   const shouldShowText = Boolean(announcement.title.trim() || announcement.body_markdown.trim()) && announcement.display_mode !== 'image';
+  const fontClass = {
+    nunito: 'font-sans',
+    noto: 'font-sans',
+    serif: 'font-serif',
+    mono: 'font-mono',
+  }[announcement.font_family ?? 'nunito'];
+  const styleClass = {
+    clean: 'border-primary/15 bg-card',
+    soft: 'border-primary/10 bg-primary-light',
+    bold: 'border-primary bg-primary text-primary-foreground',
+    outlined: 'border-primary bg-background',
+  }[announcement.visual_style ?? 'clean'];
+  const textStyle = {
+    color: announcement.text_color || undefined,
+    fontStyle: announcement.font_style === 'italic' ? 'italic' : 'normal',
+  };
+  const accentStyle = {
+    color: announcement.accent_color || undefined,
+  };
 
   if (!shouldShowImage && !shouldShowText) return null;
 
   return (
     <div className="px-3 pt-3">
-      <div className="overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-brand-sm">
+      <div className={cn('overflow-hidden rounded-2xl border shadow-brand-sm', fontClass, styleClass)}>
         {shouldShowImage && (
           <div className="relative">
             <img
@@ -37,15 +57,15 @@ export default function AnnouncementBanner({ announcement }: AnnouncementBannerP
         )}
 
         {shouldShowText && (
-          <div className="p-4">
+          <div className="p-4" style={textStyle}>
             {!shouldShowImage && (
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary" style={accentStyle}>
                 <Megaphone className="h-3.5 w-3.5" />
                 Announcement
               </div>
             )}
             {announcement.title && !shouldShowImage && (
-              <h2 className="mt-1 text-base font-black leading-tight text-foreground">{announcement.title}</h2>
+              <h2 className="mt-1 text-base font-black leading-tight">{announcement.title}</h2>
             )}
             {announcement.body_markdown && (
               <div

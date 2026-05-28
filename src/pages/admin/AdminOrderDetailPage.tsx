@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderStatus } from '@/types';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import ReceiptModal from '@/components/common/ReceiptModal';
+import ImagePreviewDialog from '@/components/common/ImagePreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, FileText, AlertTriangle } from 'lucide-react';
+import { Check, X, FileText, AlertTriangle, Image as ImageIcon, Download } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 const STATUSES: { value: OrderStatus; label: string }[] = [
@@ -36,6 +37,7 @@ export default function AdminOrderDetailPage() {
   const [isNotifyingIssue, setIsNotifyingIssue] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showPaymentProof, setShowPaymentProof] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -200,10 +202,23 @@ export default function AdminOrderDetailPage() {
         {order.payment_proof_url && (
           <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm">
             <h3 className="text-sm font-bold mb-3">Payment Proof</h3>
-            <img src={order.payment_proof_url} alt="Payment proof" className="w-full max-h-64 object-contain rounded-lg border border-border" onError={e=>{(e.target as HTMLImageElement).alt='Image load error';}} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPaymentProof(true)}
+              className="w-full h-9 gap-2 border-primary/30 text-primary"
+            >
+              <ImageIcon className="w-4 h-4" />
+              Open Payment Proof
+            </Button>
             <div className="flex gap-2 mt-3">
               <Button size="sm" onClick={verifyPayment} className="flex-1 h-8 text-xs gap-1.5 bg-green-600 hover:bg-green-700 text-white">
                 <Check className="w-3.5 h-3.5" /> Verify Payment
+              </Button>
+              <Button size="sm" asChild variant="outline" className="flex-1 h-8 text-xs gap-1.5">
+                <a href={order.payment_proof_url} download={`payment-proof-${order.order_number}`} target="_blank" rel="noreferrer">
+                  <Download className="w-3.5 h-3.5" /> Download
+                </a>
               </Button>
               <Button size="sm" variant="outline" onClick={rejectPayment} className="flex-1 h-8 text-xs gap-1.5 border-destructive text-destructive hover:bg-destructive/10">
                 <X className="w-3.5 h-3.5" /> Reject
@@ -333,6 +348,18 @@ export default function AdminOrderDetailPage() {
 
       {showReceipt && order && (
         <ReceiptModal open={showReceipt} onClose={() => setShowReceipt(false)} order={order} />
+      )}
+
+      {order.payment_proof_url && (
+        <ImagePreviewDialog
+          open={showPaymentProof}
+          onOpenChange={setShowPaymentProof}
+          title={`Payment Proof - ${order.order_number}`}
+          imageUrl={order.payment_proof_url}
+          alt={`Payment proof for order ${order.order_number}`}
+          downloadFileName={`payment-proof-${order.order_number}`}
+          showDownload
+        />
       )}
     </AdminLayout>
   );

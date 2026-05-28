@@ -5,9 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, ReceiptFieldsConfig } from '@/types';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import ReceiptModal from '@/components/common/ReceiptModal';
+import ImagePreviewDialog from '@/components/common/ImagePreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, Image as ImageIcon, Truck, Copy } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Truck, Copy, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrderDetailPage() {
@@ -22,6 +23,8 @@ export default function OrderDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [proofPreviewUrl, setProofPreviewUrl] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [showPaymentQr, setShowPaymentQr] = useState(false);
+  const [showSubmittedProof, setShowSubmittedProof] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -192,12 +195,18 @@ export default function OrderDetailPage() {
 
         {/* Payment Method - QR */}
         {usesManualQrPayment && paymentMethod?.details?.qr_image && (
-          <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm text-center">
-            <h3 className="text-sm font-bold text-foreground mb-3">Scan to Pay — {paymentMethod.name}</h3>
-            <img src={paymentMethod.details.qr_image} alt="QR Code" className="w-48 h-48 mx-auto rounded-lg object-contain" />
-            <p className="text-xs text-muted-foreground mt-2">
+          <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <QrCode className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Scan to Pay - {paymentMethod.name}</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
               {paymentMethod.details.instructions ?? 'Scan the QR code, pay the order total, then upload your proof below.'}
             </p>
+            <Button onClick={() => setShowPaymentQr(true)} className="w-full btn-gradient gap-2">
+              <QrCode className="w-4 h-4" />
+              Show Payment QR
+            </Button>
           </div>
         )}
 
@@ -248,7 +257,15 @@ export default function OrderDetailPage() {
         {order.payment_proof_url && order.status !== 'pending' && (
           <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
             <p className="text-xs font-bold text-foreground mb-2">Payment Proof Submitted</p>
-            <img src={order.payment_proof_url} alt="proof" className="w-full rounded-lg object-cover max-h-32" onError={e => {(e.target as HTMLImageElement).style.display='none';}} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSubmittedProof(true)}
+              className="w-full gap-2 border-primary/30 text-primary"
+            >
+              <ImageIcon className="w-4 h-4" />
+              View Uploaded Proof
+            </Button>
           </div>
         )}
 
@@ -265,6 +282,27 @@ export default function OrderDetailPage() {
           order={order}
           config={receiptConfig ?? undefined}
           storeName={storeName}
+        />
+      )}
+
+      {paymentMethod?.details?.qr_image && (
+        <ImagePreviewDialog
+          open={showPaymentQr}
+          onOpenChange={setShowPaymentQr}
+          title={`Pay with ${paymentMethod.name}`}
+          imageUrl={paymentMethod.details.qr_image}
+          alt={`${paymentMethod.name} QR code`}
+          description={paymentMethod.details.instructions ?? 'Scan this QR code, complete the payment, then upload your proof.'}
+        />
+      )}
+
+      {order.payment_proof_url && (
+        <ImagePreviewDialog
+          open={showSubmittedProof}
+          onOpenChange={setShowSubmittedProof}
+          title="Payment Proof"
+          imageUrl={order.payment_proof_url}
+          alt="Submitted payment proof"
         />
       )}
     </AppLayout>

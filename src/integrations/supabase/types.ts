@@ -3555,6 +3555,39 @@ export type Database = {
           },
         ]
       }
+      support_staff: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          role: string
+          telegram_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          role?: string
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          role?: string
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vouchers: {
         Row: {
           code: string

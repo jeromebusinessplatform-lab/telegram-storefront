@@ -278,6 +278,17 @@ export interface SupportMessage {
   created_at: string;
 }
 
+export interface SupportStaff {
+  id: string;
+  name: string;
+  role: string;
+  telegram_username?: string;
+  phone?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Notification ─────────────────────────────────────────────────────────────
 export interface Notification {
   id: string;
@@ -306,6 +317,11 @@ export interface AnnouncementConfig {
   body_markdown: string;
   banner_image_url: string;
   banner_alt: string;
+  font_family?: 'nunito' | 'noto' | 'serif' | 'mono';
+  font_style?: 'normal' | 'italic';
+  text_color?: string;
+  accent_color?: string;
+  visual_style?: 'clean' | 'soft' | 'bold' | 'outlined';
 }
 
 export interface CheckoutFieldsConfig {

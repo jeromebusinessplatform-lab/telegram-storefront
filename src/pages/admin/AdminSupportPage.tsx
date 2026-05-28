@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
-import { SupportTicket, SupportMessage } from '@/types';
+import { SupportTicket, SupportMessage, SupportStaff } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MessageCircle, Send, ChevronRight, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Send, ChevronRight, ArrowLeft, UserPlus, Trash2, Users } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-green-100 text-green-700',
@@ -23,6 +25,9 @@ export default function AdminSupportPage() {
   const [reply, setReply] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [staff, setStaff] = useState<SupportStaff[]>([]);
+  const [staffForm, setStaffForm] = useState({ name: '', role: 'Support Agent', telegram_username: '', phone: '' });
+  const [isAddingStaff, setIsAddingStaff] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,6 +39,49 @@ export default function AdminSupportPage() {
     };
     fetchTickets();
   }, [statusFilter]);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      const { data } = await supabase.from('support_staff').select('*').order('created_at', { ascending: false });
+      setStaff((data as unknown as SupportStaff[]) ?? []);
+    };
+    fetchStaff();
+  }, []);
+
+  const addStaff = async () => {
+    if (!staffForm.name.trim()) {
+      toast({ description: 'Support person name is required.', variant: 'destructive' });
+      return;
+    }
+    setIsAddingStaff(true);
+    const payload = {
+      name: staffForm.name.trim(),
+      role: staffForm.role.trim() || 'Support Agent',
+      telegram_username: staffForm.telegram_username.trim() || null,
+      phone: staffForm.phone.trim() || null,
+      is_active: true,
+    };
+    const { data, error } = await supabase.from('support_staff').insert(payload).select().maybeSingle();
+    if (error) {
+      toast({ description: 'Failed to add support person.', variant: 'destructive' });
+    } else if (data) {
+      setStaff(p => [data as unknown as SupportStaff, ...p]);
+      setStaffForm({ name: '', role: 'Support Agent', telegram_username: '', phone: '' });
+      toast({ description: 'Support person added.' });
+    }
+    setIsAddingStaff(false);
+  };
+
+  const toggleStaff = async (person: SupportStaff, isActive: boolean) => {
+    await supabase.from('support_staff').update({ is_active: isActive }).eq('id', person.id);
+    setStaff(p => p.map(s => s.id === person.id ? { ...s, is_active: isActive } : s));
+  };
+
+  const removeStaff = async (person: SupportStaff) => {
+    await supabase.from('support_staff').delete().eq('id', person.id);
+    setStaff(p => p.filter(s => s.id !== person.id));
+    toast({ description: 'Support person removed.' });
+  };
 
   const openTicket = async (ticket: SupportTicket) => {
     setSelectedTicket(ticket);
@@ -149,6 +197,37 @@ export default function AdminSupportPage() {
 
   return (
     <AdminLayout title="Support Tickets">
+      <div className="mb-5 rounded-xl border border-border bg-card p-4 shadow-brand-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold">Customer Support Team</h2>
+        </div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <Input value={staffForm.name} onChange={e => setStaffForm(p => ({ ...p, name: e.target.value }))} placeholder="Name" className="h-8 text-sm" />
+          <Input value={staffForm.role} onChange={e => setStaffForm(p => ({ ...p, role: e.target.value }))} placeholder="Role" className="h-8 text-sm" />
+          <Input value={staffForm.telegram_username} onChange={e => setStaffForm(p => ({ ...p, telegram_username: e.target.value }))} placeholder="@telegram" className="h-8 text-sm" />
+          <Button onClick={addStaff} disabled={isAddingStaff || !staffForm.name.trim()} className="h-8 gap-2 btn-gradient">
+            <UserPlus className="h-4 w-4" />
+            Add
+          </Button>
+        </div>
+        <div className="mt-3 space-y-2">
+          {staff.map(person => (
+            <div key={person.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">{person.name}</p>
+                <p className="text-xs text-muted-foreground">{person.role}{person.telegram_username ? ` · ${person.telegram_username}` : ''}</p>
+              </div>
+              <Switch checked={person.is_active} onCheckedChange={value => toggleStaff(person, value)} />
+              <Button variant="ghost" size="sm" onClick={() => removeStaff(person)} className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          {staff.length === 0 && <p className="py-2 text-center text-xs text-muted-foreground">No support people added yet</p>}
+        </div>
+      </div>
+
       <div className="flex gap-2 mb-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-8 text-sm w-40"><SelectValue /></SelectTrigger>

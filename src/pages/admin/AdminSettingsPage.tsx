@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { CheckoutFieldsConfig, ReceiptFieldsConfig, BotConfig, StoreInfo, ReferralConfig, AnnouncementConfig } from '@/types';
-import { Save, Store, FileText, Bot, Gift, Shield, Megaphone } from 'lucide-react';
+import { Bold, Italic, List, Heading2, Link as LinkIcon, Save, Store, FileText, Bot, Gift, Shield, Megaphone } from 'lucide-react';
 import ImageUploadInput from '@/components/common/ImageUploadInput';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
 
@@ -21,7 +21,19 @@ export default function AdminSettingsPage() {
   const [receiptCfg, setReceiptCfg] = useState<ReceiptFieldsConfig>({ show_order_number: true, show_customer_name: true, show_customer_code: true, show_items: true, show_fees: true, show_delivery_fee: true, show_voucher: true, show_total: true, show_payment_method: true, show_date: true, show_store_name: true });
   const [botCfg, setBotCfg] = useState<BotConfig>({ support_bot_username: '@PrimeCoreSupportBot', bot_token: '', notifications_enabled: false, support_relay_enabled: false });
   const [referralCfg, setReferralCfg] = useState<ReferralConfig>({ enabled: true, referrer_reward_type: 'fixed', referrer_reward_value: 50, referee_reward_type: 'fixed', referee_reward_value: 30 });
-  const [announcementCfg, setAnnouncementCfg] = useState<AnnouncementConfig>({ enabled: false, display_mode: 'both', title: '', body_markdown: '', banner_image_url: '', banner_alt: 'Store announcement' });
+  const [announcementCfg, setAnnouncementCfg] = useState<AnnouncementConfig>({
+    enabled: false,
+    display_mode: 'both',
+    title: '',
+    body_markdown: '',
+    banner_image_url: '',
+    banner_alt: 'Store announcement',
+    font_family: 'nunito',
+    font_style: 'normal',
+    text_color: '#172033',
+    accent_color: '#1687ff',
+    visual_style: 'clean',
+  });
   const [adminCode, setAdminCode] = useState('PRIME2026ADMIN');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -67,6 +79,13 @@ export default function AdminSettingsPage() {
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
+
+  const addRichText = (template: string) => {
+    setAnnouncementCfg(p => ({
+      ...p,
+      body_markdown: p.body_markdown ? `${p.body_markdown}\n${template}` : template,
+    }));
+  };
 
   return (
     <AdminLayout title="Settings">
@@ -197,6 +216,13 @@ export default function AdminSettingsPage() {
 
             <div>
               <Label className="text-xs">Announcement Body</Label>
+              <div className="mt-1 mb-2 flex flex-wrap gap-1.5">
+                <Button type="button" size="sm" variant="outline" onClick={() => addRichText('**Bold text**')} className="h-8 w-8 p-0"><Bold className="h-3.5 w-3.5" /></Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => addRichText('*Italic text*')} className="h-8 w-8 p-0"><Italic className="h-3.5 w-3.5" /></Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => addRichText('## Heading')} className="h-8 w-8 p-0"><Heading2 className="h-3.5 w-3.5" /></Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => addRichText('- Bullet item')} className="h-8 w-8 p-0"><List className="h-3.5 w-3.5" /></Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => addRichText('[Link text](https://example.com)')} className="h-8 w-8 p-0"><LinkIcon className="h-3.5 w-3.5" /></Button>
+              </div>
               <Textarea
                 value={announcementCfg.body_markdown}
                 onChange={e => setAnnouncementCfg(p => ({ ...p, body_markdown: e.target.value }))}
@@ -204,6 +230,54 @@ export default function AdminSettingsPage() {
                 className="mt-1 text-sm h-32 resize-none"
               />
               <p className="mt-1 text-[11px] text-muted-foreground">Supports bold, italic, bullet lists, headings, code, and links.</p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label className="text-xs">Font</Label>
+                <select
+                  value={announcementCfg.font_family ?? 'nunito'}
+                  onChange={e => setAnnouncementCfg(p => ({ ...p, font_family: e.target.value as AnnouncementConfig['font_family'] }))}
+                  className="mt-1 h-8 text-sm w-full border border-border rounded-md px-2 bg-background"
+                >
+                  <option value="nunito">Nunito</option>
+                  <option value="noto">Noto Sans</option>
+                  <option value="serif">Serif</option>
+                  <option value="mono">Mono</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Font Style</Label>
+                <select
+                  value={announcementCfg.font_style ?? 'normal'}
+                  onChange={e => setAnnouncementCfg(p => ({ ...p, font_style: e.target.value as AnnouncementConfig['font_style'] }))}
+                  className="mt-1 h-8 text-sm w-full border border-border rounded-md px-2 bg-background"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="italic">Italic</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Text Color</Label>
+                <Input type="color" value={announcementCfg.text_color ?? '#172033'} onChange={e => setAnnouncementCfg(p => ({ ...p, text_color: e.target.value }))} className="mt-1 h-8 p-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Accent Color</Label>
+                <Input type="color" value={announcementCfg.accent_color ?? '#1687ff'} onChange={e => setAnnouncementCfg(p => ({ ...p, accent_color: e.target.value }))} className="mt-1 h-8 p-1" />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Visual Style</Label>
+                <select
+                  value={announcementCfg.visual_style ?? 'clean'}
+                  onChange={e => setAnnouncementCfg(p => ({ ...p, visual_style: e.target.value as AnnouncementConfig['visual_style'] }))}
+                  className="mt-1 h-8 text-sm w-full border border-border rounded-md px-2 bg-background"
+                >
+                  <option value="clean">Clean</option>
+                  <option value="soft">Soft</option>
+                  <option value="bold">Bold</option>
+                  <option value="outlined">Outlined</option>
+                </select>
+              </div>
             </div>
 
             <ImageUploadInput
@@ -233,8 +307,8 @@ export default function AdminSettingsPage() {
                   />
                 )}
                 {(announcementCfg.title || announcementCfg.body_markdown) && announcementCfg.display_mode !== 'image' && (
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    {announcementCfg.title && <h4 className="text-sm font-black">{announcementCfg.title}</h4>}
+                  <div className="rounded-lg border border-border bg-card p-3" style={{ color: announcementCfg.text_color, fontStyle: announcementCfg.font_style === 'italic' ? 'italic' : 'normal' }}>
+                    {announcementCfg.title && <h4 className="text-sm font-black" style={{ color: announcementCfg.accent_color }}>{announcementCfg.title}</h4>}
                     {announcementCfg.body_markdown && (
                       <div
                         className="announcement-copy mt-2"
