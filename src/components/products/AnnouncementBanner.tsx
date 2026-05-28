@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AnnouncementConfig } from '@/types';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
 import { Megaphone } from 'lucide-react';
@@ -8,8 +9,25 @@ interface AnnouncementBannerProps {
 }
 
 export default function AnnouncementBanner({ announcement }: AnnouncementBannerProps) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const shouldShowImage = Boolean(announcement.banner_image_url) && announcement.display_mode !== 'text';
   const shouldShowText = Boolean(announcement.title.trim() || announcement.body_markdown.trim()) && announcement.display_mode !== 'image';
+  const publishAt = announcement.publish_at ? new Date(announcement.publish_at).getTime() : null;
+  const takedownAt = announcement.takedown_at ? new Date(announcement.takedown_at).getTime() : null;
+  const scheduledVisible = (
+    (!announcement.auto_publish || !publishAt || now >= publishAt) &&
+    (!announcement.auto_takedown || !takedownAt || now <= takedownAt)
+  );
+  const manualVisible = Boolean(announcement.enabled);
+  const isVisible = (manualVisible || Boolean(announcement.auto_publish)) && scheduledVisible;
+
+  if (!isVisible) return null;
+
   const fontClass = {
     nunito: 'font-sans',
     noto: 'font-sans',

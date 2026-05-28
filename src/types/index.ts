@@ -317,6 +317,10 @@ export interface AnnouncementConfig {
   body_markdown: string;
   banner_image_url: string;
   banner_alt: string;
+  auto_publish?: boolean;
+  publish_at?: string;
+  auto_takedown?: boolean;
+  takedown_at?: string;
   font_family?: 'nunito' | 'noto' | 'serif' | 'mono';
   font_style?: 'normal' | 'italic';
   text_color?: string;

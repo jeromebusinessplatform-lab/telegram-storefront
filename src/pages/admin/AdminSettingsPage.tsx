@@ -15,6 +15,18 @@ import { renderRichTextMarkdown } from '@/lib/rich-text';
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
+  const toDateTimeLocal = (value?: string) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+  const toIsoDateTime = (value: string) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  };
 
   const [storeInfo, setStoreInfo] = useState<StoreInfo>({ name: 'PRIME CORE', tagline: '', pickup_lat: 14.7103888, pickup_lng: 121.0544856, currency: 'PHP', currency_symbol: '₱' });
   const [checkoutCfg, setCheckoutCfg] = useState<CheckoutFieldsConfig>({ show_phone: true, show_email: true, show_address: true, show_city: true, show_province: true, show_zip: true, show_notes: true });
@@ -28,6 +40,10 @@ export default function AdminSettingsPage() {
     body_markdown: '',
     banner_image_url: '',
     banner_alt: 'Store announcement',
+    auto_publish: false,
+    publish_at: '',
+    auto_takedown: false,
+    takedown_at: '',
     font_family: 'nunito',
     font_style: 'normal',
     text_color: '#172033',
@@ -86,6 +102,7 @@ export default function AdminSettingsPage() {
       body_markdown: p.body_markdown ? `${p.body_markdown}\n${template}` : template,
     }));
   };
+  const hasAnnouncementSchedule = Boolean(announcementCfg.auto_publish || announcementCfg.auto_takedown);
 
   return (
     <AdminLayout title="Settings">
@@ -189,6 +206,44 @@ export default function AdminSettingsPage() {
                 <p className="text-[11px] text-muted-foreground">Publish an image banner, a rich text announcement, or both on the Products page.</p>
               </div>
               <Switch checked={announcementCfg.enabled} onCheckedChange={v => setAnnouncementCfg(p => ({ ...p, enabled: v }))} />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                <div>
+                  <Label className="text-xs font-semibold">Auto Publish</Label>
+                  <p className="text-[11px] text-muted-foreground">Show the banner once the publish time is reached.</p>
+                </div>
+                <Switch checked={announcementCfg.auto_publish ?? false} onCheckedChange={v => setAnnouncementCfg(p => ({ ...p, auto_publish: v }))} />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                <div>
+                  <Label className="text-xs font-semibold">Auto Takedown</Label>
+                  <p className="text-[11px] text-muted-foreground">Hide the banner once the takedown time is reached.</p>
+                </div>
+                <Switch checked={announcementCfg.auto_takedown ?? false} onCheckedChange={v => setAnnouncementCfg(p => ({ ...p, auto_takedown: v }))} />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label className="text-xs">Publish At</Label>
+                <Input
+                  type="datetime-local"
+                  value={toDateTimeLocal(announcementCfg.publish_at)}
+                  onChange={e => setAnnouncementCfg(p => ({ ...p, publish_at: toIsoDateTime(e.target.value) }))}
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Takedown At</Label>
+                <Input
+                  type="datetime-local"
+                  value={toDateTimeLocal(announcementCfg.takedown_at)}
+                  onChange={e => setAnnouncementCfg(p => ({ ...p, takedown_at: toIsoDateTime(e.target.value) }))}
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
             </div>
 
             <div>
@@ -298,6 +353,12 @@ export default function AdminSettingsPage() {
 
             <div className="rounded-xl border border-border bg-muted/30 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Preview</div>
+              {hasAnnouncementSchedule && (
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  {announcementCfg.auto_publish && announcementCfg.publish_at ? `Publishes at ${new Date(announcementCfg.publish_at).toLocaleString()}. ` : ''}
+                  {announcementCfg.auto_takedown && announcementCfg.takedown_at ? `Takes down at ${new Date(announcementCfg.takedown_at).toLocaleString()}.` : ''}
+                </p>
+              )}
               <div className="space-y-2">
                 {announcementCfg.banner_image_url && announcementCfg.display_mode !== 'text' && (
                   <img
