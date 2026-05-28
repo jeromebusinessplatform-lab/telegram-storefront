@@ -55,53 +55,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const urlParams = new URLSearchParams(window.location.search);
       const refCode = urlParams.get('ref') ?? startParam ?? undefined;
 
-      const existingToken = getAccessToken();
-      if (existingToken) {
-        const payload = decodeJwtPayload(existingToken);
-        const customerId = payload?.customer_id;
-        const telegramId = payload?.telegram_id;
+      if (isTelegramLaunch && launchUser && initData) {
+        const { data, error } = await supabase.functions.invoke<TelegramAuthResponse>('telegram-auth', {
+          body: {
+            init_data: initData,
+            ref_code: refCode,
+          },
+        });
 
-        if (typeof customerId === 'string') {
-          const { data } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('id', customerId)
-            .maybeSingle();
-
-          if (data) {
-            setCustomer(data as Customer);
-            setTelegramUser({
-              id: Number(telegramId ?? data.telegram_id),
-              first_name: data.telegram_first_name ?? 'User',
-              last_name: data.telegram_last_name ?? undefined,
-              username: data.telegram_username ?? undefined,
-            });
-            setIsInTelegram(true);
-            return;
-          }
+        if (error || !data?.access_token || !data.customer) {
+          return;
         }
-      }
 
-      if (!isTelegramLaunch || !launchUser || !initData) {
+        setAccessToken(data.access_token);
+
+        setCustomer(data.customer);
+        setTelegramUser(data.telegram_user);
+        setIsInTelegram(true);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke<TelegramAuthResponse>('telegram-auth', {
-        body: {
-          init_data: initData,
-          ref_code: refCode,
-        },
+      const existingToken = getAccessToken();
+      if (!existingToken) {
+        return;
+      }
+
+      const payload = decodeJwtPayload(existingToken);
+      const customerId = payload?.customer_id;
+      const telegramId = payload?.telegram_id;
+
+      if (typeof customerId !== 'string') {
+        return;
+      }
+
+      const { data } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .maybeSingle();
+
+      if (!data) {
+        return;
+      }
+
+      setCustomer(data as Customer);
+      setTelegramUser({
+        id: Number(telegramId ?? data.telegram_id),
+        first_name: data.telegram_first_name ?? 'User',
+        last_name: data.telegram_last_name ?? undefined,
+        username: data.telegram_username ?? undefined,
       });
-
-      if (error || !data?.access_token || !data.customer) {
-        return;
-      }
-
-      setAccessToken(data.access_token);
-
-      setCustomer(data.customer);
-      setTelegramUser(data.telegram_user);
-      setIsInTelegram(true);
     } finally {
       setIsLoading(false);
     }
