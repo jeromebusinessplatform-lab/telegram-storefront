@@ -16,6 +16,7 @@ export default function StorePage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const showAnnouncementBanner = Boolean(announcement && (announcement.enabled || announcement.auto_publish));
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -62,7 +63,7 @@ export default function StorePage() {
   return (
     <AppLayout>
       <div className="pb-2">
-        {announcement?.enabled && <AnnouncementBanner announcement={announcement} />}
+        {showAnnouncementBanner && <AnnouncementBanner announcement={announcement!} fixed />}
 
         {/* Welcome banner */}
         {customer && (

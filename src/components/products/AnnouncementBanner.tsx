@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { AnnouncementConfig } from '@/types';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
 import { Megaphone } from 'lucide-react';
@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils';
 
 interface AnnouncementBannerProps {
   announcement: AnnouncementConfig;
+  fixed?: boolean;
 }
 
-export default function AnnouncementBanner({ announcement }: AnnouncementBannerProps) {
+export default function AnnouncementBanner({ announcement, fixed = false }: AnnouncementBannerProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
@@ -50,50 +51,59 @@ export default function AnnouncementBanner({ announcement }: AnnouncementBannerP
 
   if (!shouldShowImage && !shouldShowText) return null;
 
+  const spacerClass = shouldShowImage
+    ? shouldShowText
+      ? 'h-[216px] sm:h-[256px]'
+      : 'h-[184px] sm:h-[224px]'
+    : 'h-[136px] sm:h-[160px]';
+
   return (
-    <div className="px-3 pt-3">
-      <div className={cn('overflow-hidden rounded-2xl border shadow-brand-sm', fontClass, styleClass)}>
-        {shouldShowImage && (
-          <div className="relative">
-            <img
-              src={announcement.banner_image_url}
-              alt={announcement.banner_alt || announcement.title || 'Announcement banner'}
-              className="h-40 w-full object-cover sm:h-48"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
-            {announcement.title && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">
+    <Fragment>
+      {fixed && <div className={spacerClass} aria-hidden="true" />}
+      <div className={cn('px-3 pt-3', fixed && 'fixed inset-x-0 top-[var(--header-height)] z-30')}>
+        <div className={cn('overflow-hidden rounded-2xl border shadow-brand-sm', fontClass, styleClass)}>
+          {shouldShowImage && (
+            <div className="relative">
+              <img
+                src={announcement.banner_image_url}
+                alt={announcement.banner_alt || announcement.title || 'Announcement banner'}
+                className="h-40 w-full object-cover sm:h-48"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+              {announcement.title && (
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">
+                    <Megaphone className="h-3.5 w-3.5" />
+                    Announcement
+                  </div>
+                  <h2 className="mt-1 text-lg font-black leading-tight">{announcement.title}</h2>
+                </div>
+              )}
+            </div>
+          )}
+
+          {shouldShowText && (
+            <div className="p-4" style={textStyle}>
+              {!shouldShowImage && (
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary" style={accentStyle}>
                   <Megaphone className="h-3.5 w-3.5" />
                   Announcement
                 </div>
-                <h2 className="mt-1 text-lg font-black leading-tight">{announcement.title}</h2>
-              </div>
-            )}
-          </div>
-        )}
-
-        {shouldShowText && (
-          <div className="p-4" style={textStyle}>
-            {!shouldShowImage && (
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary" style={accentStyle}>
-                <Megaphone className="h-3.5 w-3.5" />
-                Announcement
-              </div>
-            )}
-            {announcement.title && !shouldShowImage && (
-              <h2 className="mt-1 text-base font-black leading-tight">{announcement.title}</h2>
-            )}
-            {announcement.body_markdown && (
-              <div
-                className="announcement-copy"
-                dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(announcement.body_markdown) }}
-              />
-            )}
-          </div>
-        )}
+              )}
+              {announcement.title && !shouldShowImage && (
+                <h2 className="mt-1 text-base font-black leading-tight">{announcement.title}</h2>
+              )}
+              {announcement.body_markdown && (
+                <div
+                  className="announcement-copy"
+                  dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(announcement.body_markdown) }}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Fragment>
   );
 }
