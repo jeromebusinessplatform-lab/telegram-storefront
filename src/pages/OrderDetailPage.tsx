@@ -21,7 +21,7 @@ export default function OrderDetailPage() {
   const [receiptConfig, setReceiptConfig] = useState<ReceiptFieldsConfig | null>(null);
   const [storeName, setStoreName] = useState('PRIME CORE');
   const [isUploading, setIsUploading] = useState(false);
-  const [proofUrl, setProofUrl] = useState('');
+  const [proofPreviewUrl, setProofPreviewUrl] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -50,18 +50,29 @@ export default function OrderDetailPage() {
     if (!file) return;
     setProofFile(file);
     const reader = new FileReader();
-    reader.onload = ev => setProofUrl(ev.target?.result as string);
+    reader.onload = ev => setProofPreviewUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const submitProof = async () => {
-    if (!order || (!proofUrl && !proofFile)) {
+    if (!order || !proofFile) {
       toast({ description: 'Please select a payment proof image', variant: 'destructive' });
       return;
     }
     setIsUploading(true);
     try {
-      const uploadUrl = proofFile ? proofUrl : proofUrl;
+      const fileExt = proofFile.name.split('.').pop() || 'jpg';
+      const filePath = `payment-proofs/${order.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('payment-proofs').upload(filePath, proofFile, {
+        cacheControl: '3600',
+        contentType: proofFile.type || 'image/jpeg',
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from('payment-proofs').getPublicUrl(filePath);
+      const uploadUrl = publicUrlData.publicUrl;
+
       const { error } = await supabase.from('orders').update({
         payment_proof_url: uploadUrl,
         status: 'payment_submitted',
@@ -69,6 +80,8 @@ export default function OrderDetailPage() {
       if (error) throw error;
       toast({ description: 'Payment proof submitted! Awaiting verification.' });
       setOrder(p => p ? { ...p, payment_proof_url: uploadUrl, status: 'payment_submitted' } : p);
+      setProofPreviewUrl('');
+      setProofFile(null);
     } catch {
       toast({ description: 'Failed to submit proof. Please try again.', variant: 'destructive' });
     } finally {
@@ -97,8 +110,9 @@ export default function OrderDetailPage() {
     );
   }
 
-  const paymentMethod = order.payment_methods as unknown as {name: string; type: string; details: {qr_image?: string}} | null;
-  const needsProof = paymentMethod?.type === 'qrph' && order.status === 'pending';
+  const paymentMethod = order.payment_methods as unknown as {name: string; type: string; details: {qr_image?: string; instructions?: string}} | null;
+  const usesManualQrPayment = paymentMethod?.type === 'qrph' || paymentMethod?.type === 'custom';
+  const needsProof = usesManualQrPayment && order.status === 'pending';
 
   return (
     <AppLayout showBack title="Order Details">
@@ -155,11 +169,13 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Payment Method - QR */}
-        {paymentMethod?.type === 'qrph' && paymentMethod.details?.qr_image && (
+        {usesManualQrPayment && paymentMethod?.details?.qr_image && (
           <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm text-center">
             <h3 className="text-sm font-bold text-foreground mb-3">Scan to Pay — {paymentMethod.name}</h3>
             <img src={paymentMethod.details.qr_image} alt="QR Code" className="w-48 h-48 mx-auto rounded-lg object-contain" />
-            <p className="text-xs text-muted-foreground mt-2">{paymentMethod.details.instructions}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              {paymentMethod.details.instructions ?? 'Scan the QR code, pay the order total, then upload your proof below.'}
+            </p>
           </div>
         )}
 
@@ -170,11 +186,11 @@ export default function OrderDetailPage() {
               <Upload className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-bold text-foreground">Upload Payment Proof</h3>
             </div>
-            {proofUrl ? (
+            {proofPreviewUrl ? (
               <div className="space-y-2">
-                <img src={proofUrl} alt="proof" className="w-full rounded-lg object-cover max-h-48" />
+                <img src={proofPreviewUrl} alt="proof" className="w-full rounded-lg object-cover max-h-48" />
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setProofUrl(''); setProofFile(null); }} className="flex-1 h-8 text-xs">Change</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setProofPreviewUrl(''); setProofFile(null); }} className="flex-1 h-8 text-xs">Change</Button>
                   <Button size="sm" onClick={submitProof} disabled={isUploading} className="flex-1 h-8 text-xs btn-gradient">
                     {isUploading ? 'Submitting...' : 'Submit Proof'}
                   </Button>

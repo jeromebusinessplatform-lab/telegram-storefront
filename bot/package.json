@@ -1,0 +1,11 @@
+{
+  "name": "telegram-bot-service",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}

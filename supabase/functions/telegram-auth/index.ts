@@ -118,6 +118,24 @@ function generateCustomerCode(): string {
   return code;
 }
 
+function buildSupabaseClaims(subject: string, extras: Record<string, unknown>) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    iss: `${Deno.env.get("SUPABASE_URL") ?? ""}/auth/v1`,
+    aud: "authenticated",
+    role: "authenticated",
+    sub: subject,
+    exp: now + 60 * 60 * 24 * 7,
+    iat: now,
+    aal: "aal1",
+    session_id: crypto.randomUUID(),
+    email: "",
+    phone: "",
+    is_anonymous: false,
+    ...extras,
+  };
+}
+
 async function signSupabaseJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = base64UrlJson(header);
@@ -221,18 +239,12 @@ Deno.serve(async (req) => {
       customer = inserted as CustomerRow;
     }
 
-    const now = Math.floor(Date.now() / 1000);
     const accessToken = await signSupabaseJwt(
-      {
-        aud: "authenticated",
-        role: "authenticated",
-        sub: customer.id,
-        exp: now + 60 * 60 * 24 * 7,
-        iat: now,
+      buildSupabaseClaims(customer.id, {
         telegram_id: telegramId,
         customer_id: customer.id,
         customer_code: customer.customer_code,
-      },
+      }),
       jwtSecret,
     );
 

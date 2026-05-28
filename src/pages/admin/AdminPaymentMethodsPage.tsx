@@ -121,7 +121,7 @@ export default function AdminPaymentMethodsPage() {
                   <SelectItem value="qrph">QRPH / GCash</SelectItem>
                   <SelectItem value="maya">Maya</SelectItem>
                   <SelectItem value="cod">Cash on Delivery</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="custom">Manual QR Code</SelectItem>
                 </SelectContent>
               </Select>
             </div>

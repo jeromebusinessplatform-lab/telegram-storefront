@@ -1,111 +1,96 @@
-# Welcome to your Enter project
+# Telegram E-Commerce Mini App
 
-[![Built with enter.pro](https://img.shields.io/badge/Build%20with-Enter.pro-FC5776?style=for-the-badge&labelColor=1F1F1F)](https://enter.pro)
+This repository contains a Telegram Mini App frontend, Supabase functions and migrations, and a minimal Railway bot service.
 
-*Automatically synced with your [enter.pro](https://enter.pro) workspace* 
+## Stack
 
----
+- Vite + React + TypeScript frontend
+- Supabase for database, RLS, and auth helpers
+- Railway for the Telegram bot process
+- Vercel for the public web app
 
-## Overview
+## What is deployed where
 
-This repository is automatically linked to your app on [enter.pro](https://enter.pro).  
-Every change you make in Enter will be reflected here — and any updates you push to this repo will sync back seamlessly.  
+- Vercel hosts the Mini App frontend on a free `*.vercel.app` subdomain or your own custom subdomain.
+- Railway hosts `bot/`, which responds to Telegram updates and sends users into the Mini App.
+- Supabase hosts the database, migrations, and Edge Functions.
 
-Enter.pro helps you **build, edit, and deploy full-stack web apps by prompting**.  
-Just describe what you want — Enter turns ideas into production-ready code.
+## Required environment variables
 
----
+### Frontend / Vercel
 
-## Project URLs
+Set these in Vercel:
 
-**Live app:** https://<project-id>-latest.preview.enter.pro  
-**Edit & build in Enter:** https://enter.pro/project/<project-id>
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
+Optional analytics variables already supported by the app:
 
----
+- `VITE_ENTER_ANALYTICS_ENABLED`
+- `VITE_ENTER_ANALYTICS_TOKEN`
+- `VITE_ENTER_PROJECT_ID`
+- `VITE_ENTER_ANALYTICS_ENDPOINT`
+- `VITE_ENTER_ANALYTICS_DEFINITIONS_ENDPOINT`
+- `VITE_ENTER_ANALYTICS_DEBUG`
 
-## Continue building
+### Railway bot service
 
-Keep developing your app directly in [Enter.pro](https://enter.pro/project/<project-id>).  
-Prompt new features, refine the UI, or connect integrations — all changes are versioned and synced automatically to GitHub.
+Set these in Railway for the `bot/` service:
 
----
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBAPP_URL`
+- `TELEGRAM_WEBHOOK_URL`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `PORT`
+
+### Supabase auth helpers
+
+The Edge Functions in `supabase/functions/` require:
+
+- `TELEGRAM_BOT_TOKEN`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_JWT_SECRET`
+
+### Supabase storage
+
+Create or deploy the `payment-proofs` bucket from the migration in `supabase/migrations/`. It stores customer receipt images for manual verification.
+
+## Deployment order
+
+1. Push this repo to GitHub.
+2. Import the GitHub repo into Vercel and set the frontend env vars.
+3. Deploy the `bot/` folder as a Railway service and set the bot env vars.
+4. Deploy the Supabase migrations from `supabase/migrations/`.
+5. Deploy the Supabase Edge Functions from `supabase/functions/`.
+6. Set the Telegram bot webhook to the Railway webhook URL.
+7. Set your Telegram Mini App URL to the Vercel production URL.
+
+## Production auth flow
+
+- Telegram users open the bot and launch the Mini App from Telegram.
+- The frontend verifies `Telegram.WebApp.initData` through Supabase Edge Functions.
+- The auth helpers return signed JWT access tokens that carry the customer or admin claims.
+- Supabase RLS uses those claims to authorize reads and writes without browser-side session handling.
+- Manual QR payments work through a QR payment method plus receipt upload into Supabase Storage.
+- There is no reliable way to auto-detect a bank transfer or QR payment without a provider/API, so verification stays manual.
 
 ## Local development
 
-Prefer to work locally? You can clone this repo and start developing right away:
-
 ```bash
-# Step 1: Clone your project repository
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate into the project folder
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install all dependencies
 npm install
-
-# Step 4: Start the local development server
 npm run dev
 ```
 
-Push your commits — Enter.pro will automatically detect and sync your latest changes.
+To run the bot locally:
 
----
+```bash
+cd bot
+npm install
+npm start
+```
 
-## Tech stack
+## Notes
 
-This project uses:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
----
-
-## Deployment
-
-To deploy, open your Enter.pro project and click "Publish"
-
-Your app will automatically build and go live at your production URL.
-
-### Vercel + GitHub + Supabase
-
-This repo is now ready to be connected to GitHub, deployed on Vercel, and pointed at Supabase.
-
-1. Create or connect a GitHub repository for this codebase.
-2. Import that GitHub repo into Vercel.
-3. Add these environment variables in Vercel:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_ENTER_ANALYTICS_ENABLED`
-   - `VITE_ENTER_ANALYTICS_TOKEN`
-   - `VITE_ENTER_PROJECT_ID`
-   - `VITE_ENTER_ANALYTICS_ENDPOINT`
-   - `VITE_ENTER_ANALYTICS_DEFINITIONS_ENDPOINT`
-   - `VITE_ENTER_ANALYTICS_DEBUG`
-4. Keep the Supabase project schema and migrations in sync with the `supabase/` directory.
-5. Push through GitHub so Vercel can create previews and production deploys automatically.
-
-The frontend now reads Supabase credentials from environment variables, with the current project values as local fallbacks.
-
-### Telegram Mini App Deployment Split
-
-- Vercel: hosts the web app on a free `*.vercel.app` preview/production subdomain.
-- Railway: hosts the Telegram bot process.
-- Supabase: hosts the database, RLS policies, and the lightweight auth helpers in `supabase/functions/`.
-
-Required secrets:
-- Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- Supabase/Railway backend: `TELEGRAM_BOT_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`
-
-Auth flow:
-- Telegram Mini App users are verified from `Telegram.WebApp.initData`.
-- Admin users exchange the admin access code for an admin token.
-- The frontend uses the signed token to satisfy RLS without a heavier auth stack.
-
----
-
-✨ Keep prompting, keep building — Enter.pro handles the rest.
+- The app uses lazy-loaded routes and a simple loading fallback to keep the initial bundle small.
+- The auth model is intentionally minimal: Telegram launch verification for customers and a signed admin token for admin access.
+- No extra auth provider is required for the beta-to-production path.

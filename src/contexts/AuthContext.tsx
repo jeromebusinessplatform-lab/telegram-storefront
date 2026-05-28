@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, TelegramUser } from '@/types';
 import { useTelegram } from '@/hooks/useTelegram';
+import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/access-token';
 
 interface AuthContextValue {
   customer: Customer | null;
@@ -54,11 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const urlParams = new URLSearchParams(window.location.search);
       const refCode = urlParams.get('ref') ?? startParam ?? undefined;
 
-      const sessionResult = await supabase.auth.getSession();
-      const session = sessionResult.data.session;
-
-      if (session?.access_token) {
-        const payload = decodeJwtPayload(session.access_token);
+      const existingToken = getAccessToken();
+      if (existingToken) {
+        const payload = decodeJwtPayload(existingToken);
         const customerId = payload?.customer_id;
         const telegramId = payload?.telegram_id;
 
@@ -98,10 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.access_token,
-      });
+      setAccessToken(data.access_token);
 
       setCustomer(data.customer);
       setTelegramUser(data.telegram_user);

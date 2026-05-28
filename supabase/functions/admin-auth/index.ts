@@ -32,6 +32,24 @@ async function hmacSha256(key: string, message: string): Promise<Uint8Array> {
   return new Uint8Array(signature);
 }
 
+function buildSupabaseClaims(subject: string, extras: Record<string, unknown>) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    iss: `${Deno.env.get("SUPABASE_URL") ?? ""}/auth/v1`,
+    aud: "authenticated",
+    role: "authenticated",
+    sub: subject,
+    exp: now + 60 * 60 * 12,
+    iat: now,
+    aal: "aal1",
+    session_id: crypto.randomUUID(),
+    email: "",
+    phone: "",
+    is_anonymous: false,
+    ...extras,
+  };
+}
+
 async function signSupabaseJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = base64UrlJson(header);
@@ -86,16 +104,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const now = Math.floor(Date.now() / 1000);
     const accessToken = await signSupabaseJwt(
-      {
-        aud: "authenticated",
-        role: "authenticated",
-        sub: "admin",
-        exp: now + 60 * 60 * 12,
-        iat: now,
+      buildSupabaseClaims("admin", {
         is_admin: true,
-      },
+      }),
       jwtSecret,
     );
 

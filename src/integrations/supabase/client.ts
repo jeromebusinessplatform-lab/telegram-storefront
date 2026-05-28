@@ -2,21 +2,20 @@
 // Powered by EnterCloud Managed Supabase
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { getAccessToken } from '@/lib/access-token';
 
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL ||
-  'https://spb-t4n6tz37n4q05932.supabase.opentrust.net';
-const SUPABASE_PUBLISHABLE_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6InNwYi10NG42dHozN240cTA1OTMyIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3Nzk1Mjk5NTgsImV4cCI6MjA5NTEwNTk1OH0.IHwgB1V9CkpQ-Orfck5IdlpHk7mZQynXS055pGZTvfM';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: false,
+  accessToken: async () => {
+    return getAccessToken();
   }
 });

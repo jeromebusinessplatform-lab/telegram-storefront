@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/access-token';
 
 interface AdminContextValue {
   isAdmin: boolean;
@@ -34,12 +35,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      const payload = data.session?.access_token ? decodeJwtPayload(data.session.access_token) : null;
-      if (payload?.is_admin === true) {
-        setIsAdmin(true);
-      }
-    });
+    const token = getAccessToken();
+    const payload = token ? decodeJwtPayload(token) : null;
+    if (payload?.is_admin === true) setIsAdmin(true);
   }, []);
 
   const login = async (code: string): Promise<boolean> => {
@@ -61,10 +59,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.access_token,
-      });
+      setAccessToken(data.access_token);
 
       if (payload?.is_admin) {
         setIsAdmin(true);
@@ -80,7 +75,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setIsAdmin(false);
-    void supabase.auth.signOut({ scope: 'local' });
+    clearAccessToken();
   };
 
   return (
