@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types';
@@ -10,9 +10,10 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ImageUploadInput from '@/components/common/ImageUploadInput';
-import { Plus, Pencil, Trash2, Package, X, Eye, EyeOff } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, Plus, Pencil, Trash2, Package, X, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { renderRichTextMarkdown } from '@/lib/rich-text';
 
 const EMPTY_PRODUCT = {
   name: '', sub_name: '', description: '', price: '', stock: '',
@@ -33,6 +34,7 @@ export default function AdminProductsPage() {
   const [newCatName, setNewCatName] = useState('');
   const [showAddCat, setShowAddCat] = useState(false);
   const [isAddingCat, setIsAddingCat] = useState(false);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -77,6 +79,24 @@ export default function AdminProductsPage() {
   };
 
   const removeImage = (idx: number) => setForm(p => ({ ...p, images: p.images.filter((_, i) => i !== idx) }));
+
+  const insertDescriptionText = (snippet: string) => {
+    const textarea = descriptionRef.current;
+    setForm(p => {
+      const current = p.description ?? '';
+      if (!textarea) return { ...p, description: current ? `${current}\n${snippet}` : snippet };
+
+      const start = textarea.selectionStart ?? current.length;
+      const end = textarea.selectionEnd ?? current.length;
+      const next = `${current.slice(0, start)}${snippet}${current.slice(end)}`;
+      requestAnimationFrame(() => {
+        const pos = start + snippet.length;
+        textarea.focus();
+        textarea.setSelectionRange(pos, pos);
+      });
+      return { ...p, description: next };
+    });
+  };
 
   const save = async () => {
     if (!form.name.trim() || !form.price) {
@@ -224,7 +244,37 @@ export default function AdminProductsPage() {
 
             <div>
               <Label className="text-xs">Description</Label>
-              <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Product description..." className="mt-1 text-sm h-16 resize-none" />
+              <div className="mt-1 mb-2 flex flex-wrap gap-1.5">
+                <Button type="button" size="sm" variant="outline" onClick={() => insertDescriptionText('- Bullet item')} className="h-8 gap-1.5 text-xs">
+                  <List className="w-3.5 h-3.5" /> Bullet
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => insertDescriptionText('1. Numbered item')} className="h-8 gap-1.5 text-xs">
+                  <ListOrdered className="w-3.5 h-3.5" /> Number
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => insertDescriptionText('**Bold text**')} className="h-8 gap-1.5 text-xs">
+                  <Bold className="w-3.5 h-3.5" /> Bold
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => insertDescriptionText('*Italic text*')} className="h-8 gap-1.5 text-xs">
+                  <Italic className="w-3.5 h-3.5" /> Italic
+                </Button>
+              </div>
+              <Textarea
+                ref={descriptionRef}
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="Product description..."
+                className="mt-1 text-sm h-24 resize-none"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Use markdown lines for bullets, dashes, and numbered lists.</p>
+              {form.description && (
+                <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</div>
+                  <div
+                    className="product-description-copy"
+                    dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(form.description) }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

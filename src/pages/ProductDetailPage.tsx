@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ShoppingCart, Minus, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { renderRichTextMarkdown } from '@/lib/rich-text';
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -128,7 +129,10 @@ export default function ProductDetailPage() {
             </div>
 
             {product.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
+              <div
+                className="product-description-copy"
+                dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(product.description) }}
+              />
             )}
 
             {/* Quantity */}

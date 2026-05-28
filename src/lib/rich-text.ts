@@ -21,12 +21,12 @@ export function renderRichTextMarkdown(markdown: string) {
 
   const lines = normalized.split('\n');
   const html: string[] = [];
-  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
 
   const closeList = () => {
-    if (inList) {
-      html.push('</ul>');
-      inList = false;
+    if (listType) {
+      html.push(`</${listType}>`);
+      listType = null;
     }
   };
 
@@ -47,13 +47,17 @@ export function renderRichTextMarkdown(markdown: string) {
       continue;
     }
 
-    const listMatch = trimmed.match(/^[-*]\s+(.+)$/);
-    if (listMatch) {
-      if (!inList) {
-        html.push('<ul>');
-        inList = true;
+    const bulletMatch = trimmed.match(/^[-*]\s+(.+)$/);
+    const orderedMatch = trimmed.match(/^\d+[.)]\s+(.+)$/);
+    const nextListType = bulletMatch ? 'ul' : orderedMatch ? 'ol' : null;
+    const listText = bulletMatch?.[1] ?? orderedMatch?.[1];
+    if (nextListType && listText) {
+      if (listType !== nextListType) {
+        closeList();
+        html.push(`<${nextListType}>`);
+        listType = nextListType;
       }
-      html.push(`<li>${formatInline(listMatch[1])}</li>`);
+      html.push(`<li>${formatInline(listText)}</li>`);
       continue;
     }
 

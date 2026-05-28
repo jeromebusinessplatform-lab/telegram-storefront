@@ -214,6 +214,12 @@ html, body, #root {
   list-style: disc;
 }
 
+.announcement-copy ol {
+  margin: 0.35rem 0;
+  padding-left: 1.15rem;
+  list-style: decimal;
+}
+
 .announcement-copy li {
   margin: 0.15rem 0;
 }
@@ -233,6 +239,58 @@ html, body, #root {
 }
 
 .announcement-copy code {
+  padding: 0.12rem 0.28rem;
+  border-radius: 0.35rem;
+  background: hsl(var(--muted));
+  font-size: 0.85em;
+}
+
+/* Product description content */
+.product-description-copy {
+  color: hsl(var(--muted-foreground));
+  line-height: 1.7;
+  font-size: 0.875rem;
+}
+
+.product-description-copy h1,
+.product-description-copy h2,
+.product-description-copy h3 {
+  margin: 0.5rem 0 0.3rem;
+  font-weight: 800;
+  color: hsl(var(--foreground));
+}
+
+.product-description-copy h1 { font-size: 1.1rem; }
+.product-description-copy h2 { font-size: 1rem; }
+.product-description-copy h3 { font-size: 0.95rem; }
+
+.product-description-copy p {
+  margin: 0.3rem 0;
+}
+
+.product-description-copy ul,
+.product-description-copy ol {
+  margin: 0.35rem 0;
+  padding-left: 1.15rem;
+}
+
+.product-description-copy ul { list-style: disc; }
+.product-description-copy ol { list-style: decimal; }
+
+.product-description-copy li {
+  margin: 0.15rem 0;
+}
+
+.product-description-copy strong {
+  font-weight: 800;
+  color: hsl(var(--foreground));
+}
+
+.product-description-copy em {
+  font-style: italic;
+}
+
+.product-description-copy code {
   padding: 0.12rem 0.28rem;
   border-radius: 0.35rem;
   background: hsl(var(--muted));
