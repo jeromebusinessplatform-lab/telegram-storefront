@@ -1,0 +1,178 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 40% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 15%;
+
+    /* Light blue primary — Telegram-ish */
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 210 100% 96%;
+    --primary-glow: 210 100% 68%;
+
+    --secondary: 210 60% 96%;
+    --secondary-foreground: 210 100% 40%;
+
+    --muted: 210 30% 96%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 30% 90%;
+    --input: 210 30% 90%;
+    --ring: 210 100% 52%;
+
+    --radius: 0.75rem;
+
+    /* Brand tokens */
+    --brand-blue: 210 100% 52%;
+    --brand-blue-light: 210 100% 96%;
+    --brand-blue-mid: 210 100% 88%;
+    --brand-sky: 199 89% 48%;
+    --brand-navy: 220 40% 15%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210,100%,52%), hsl(199,89%,48%));
+    --gradient-subtle: linear-gradient(180deg, hsl(210,100%,98%), hsl(0,0%,100%));
+    --gradient-card: linear-gradient(135deg, hsl(210,100%,97%), hsl(199,89%,96%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px 0 hsl(210 100% 52% / 0.08);
+    --shadow-md: 0 4px 12px 0 hsl(210 100% 52% / 0.12);
+    --shadow-lg: 0 8px 24px 0 hsl(210 100% 52% / 0.16);
+    --shadow-glow: 0 0 20px hsl(210 100% 68% / 0.3);
+
+    /* Transitions */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Layout */
+    --header-height: 56px;
+    --bottom-nav-height: 64px;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 40% 15%;
+    --sidebar-primary: 210 100% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 60% 96%;
+    --sidebar-accent-foreground: 210 100% 40%;
+    --sidebar-border: 210 30% 90%;
+    --sidebar-ring: 210 100% 52%;
+  }
+
+  .dark {
+    --background: 220 40% 8%;
+    --foreground: 210 40% 96%;
+    --card: 220 35% 12%;
+    --card-foreground: 210 40% 96%;
+    --popover: 220 35% 12%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 210 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 30% 18%;
+    --secondary-foreground: 210 60% 80%;
+    --muted: 210 30% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 199 89% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 30% 22%;
+    --input: 210 30% 22%;
+    --ring: 210 100% 60%;
+    --sidebar-background: 220 40% 8%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 210 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 30% 18%;
+    --sidebar-accent-foreground: 210 60% 80%;
+    --sidebar-border: 210 30% 22%;
+    --sidebar-ring: 210 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', 'Noto Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Scrollable content areas */
+.scroll-content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar but keep scrolling */
+.scroll-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Product grid tile */
+.product-tile {
+  transition: var(--transition-smooth);
+}
+.product-tile:active {
+  transform: scale(0.97);
+}
+
+/* Bottom nav active indicator */
+.nav-active {
+  color: hsl(var(--primary));
+}
+
+/* Blue gradient button */
+.btn-gradient {
+  background: var(--gradient-primary);
+  color: white;
+  transition: var(--transition-smooth);
+}
+.btn-gradient:hover {
+  opacity: 0.9;
+  box-shadow: var(--shadow-glow);
+}
+.btn-gradient:active {
+  transform: scale(0.98);
+}
+
+/* Card with subtle shadow */
+.card-elevated {
+  box-shadow: var(--shadow-md);
+}
+
+/* Pulse animation for badge */
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.badge-pulse {
+  animation: pulse-badge 2s ease-in-out infinite;
+}

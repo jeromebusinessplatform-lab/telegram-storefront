@@ -1,0 +1,148 @@
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Order, ReceiptFieldsConfig } from '@/types';
+import { CheckCircle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface ReceiptModalProps {
+  open: boolean;
+  onClose: () => void;
+  order: Order;
+  config?: ReceiptFieldsConfig;
+  storeName?: string;
+}
+
+const DEFAULT_CONFIG: ReceiptFieldsConfig = {
+  show_order_number: true,
+  show_customer_name: true,
+  show_customer_code: true,
+  show_items: true,
+  show_fees: true,
+  show_delivery_fee: true,
+  show_voucher: true,
+  show_total: true,
+  show_payment_method: true,
+  show_date: true,
+  show_store_name: true,
+};
+
+export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CONFIG, storeName = 'PRIME CORE' }: ReceiptModalProps) {
+  const customer = order.customers;
+  const paymentMethod = order.payment_methods;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm p-0 overflow-hidden">
+        <div className="bg-gradient-primary p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-bold text-sm">Order Receipt</span>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          {config.show_store_name && (
+            <div className="text-center border-b border-border pb-3">
+              <p className="font-black text-base text-foreground">{storeName}</p>
+              <p className="text-[11px] text-muted-foreground">Official Receipt</p>
+            </div>
+          )}
+
+          <div className="space-y-1 text-xs">
+            {config.show_date && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Date</span>
+                <span className="font-semibold">{new Date(order.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            )}
+            {config.show_order_number && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order #</span>
+                <span className="font-bold text-primary">{order.order_number}</span>
+              </div>
+            )}
+            {config.show_customer_name && customer && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer</span>
+                <span className="font-semibold">{customer.telegram_first_name} {customer.telegram_last_name ?? ''}</span>
+              </div>
+            )}
+            {config.show_customer_code && customer && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer ID</span>
+                <span className="font-mono font-bold">{customer.customer_code}</span>
+              </div>
+            )}
+          </div>
+
+          {config.show_items && order.items?.length > 0 && (
+            <div className="border-t border-dashed border-border pt-3 space-y-1.5">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Items</p>
+              {order.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-xs">
+                  <span className="flex-1 text-foreground">
+                    {item.name}{item.sub_name ? ` · ${item.sub_name}` : item.variant ? ` (${item.variant})` : ''} x{item.quantity}
+                  </span>
+                  <span className="font-semibold ml-2">₱{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t border-dashed border-border pt-3 space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-semibold">₱{order.subtotal.toFixed(2)}</span>
+            </div>
+            {config.show_fees && order.fees_applied?.map((fee, i) => (
+              <div key={i} className="flex justify-between">
+                <span className="text-muted-foreground">{fee.name}</span>
+                <span className={`font-semibold ${fee.category === 'discount' ? 'text-green-600' : ''}`}>
+                  {fee.category === 'discount' ? '-' : '+'}₱{fee.amount.toFixed(2)}
+                </span>
+              </div>
+            ))}
+            {config.show_delivery_fee && order.delivery_fee > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Delivery Fee</span>
+                <span className="font-semibold">₱{order.delivery_fee.toFixed(2)}</span>
+              </div>
+            )}
+            {config.show_voucher && order.voucher_discount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Voucher ({order.voucher_code})</span>
+                <span className="font-semibold text-green-600">-₱{order.voucher_discount.toFixed(2)}</span>
+              </div>
+            )}
+            {config.show_payment_method && paymentMethod && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment</span>
+                <span className="font-semibold">{paymentMethod.name}</span>
+              </div>
+            )}
+          </div>
+
+          {config.show_total && (
+            <div className="border-t-2 border-border pt-2 flex justify-between">
+              <span className="font-bold text-sm">TOTAL</span>
+              <span className="font-black text-base text-primary">₱{order.total.toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="text-center pt-2 border-t border-dashed border-border">
+            <p className="text-[10px] text-muted-foreground">Thank you for your order!</p>
+            <p className="text-[10px] text-muted-foreground">{storeName}</p>
+          </div>
+        </div>
+
+        <div className="p-3 border-t border-border">
+          <Button onClick={onClose} className="w-full btn-gradient h-9 text-sm font-bold">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
