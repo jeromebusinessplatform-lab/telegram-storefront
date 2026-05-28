@@ -41,6 +41,9 @@ Set these in Railway for the `bot/` service:
 - `TELEGRAM_WEBAPP_URL`
 - `TELEGRAM_WEBHOOK_URL`
 - `TELEGRAM_WEBHOOK_SECRET`
+- `TELEGRAM_ADMIN_CHAT_IDS`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `PORT`
 
 ### Supabase auth helpers
@@ -50,6 +53,14 @@ The Edge Functions in `supabase/functions/` require:
 - `TELEGRAM_BOT_TOKEN`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_JWT_SECRET`
+
+### Order issue relay
+
+- Admins can trigger an order issue relay from the order detail screen.
+- The customer gets a Telegram message from the storefront bot.
+- Customer replies to that bot message are forwarded to the admin chat IDs configured in Railway.
+- Admin replies to the bot message are sent back to the customer from the same bot account.
+- The relay is thread-based, so replies stay tied to the exact issue message instead of a generic open thread.
 
 ### Supabase storage
 
@@ -73,6 +84,7 @@ Create or deploy the `payment-proofs` bucket from the migration in `supabase/mig
 - Supabase RLS uses those claims to authorize reads and writes without browser-side session handling.
 - Manual QR payments work through a QR payment method plus receipt upload into Supabase Storage.
 - There is no reliable way to auto-detect a bank transfer or QR payment without a provider/API, so verification stays manual.
+- The order issue relay uses the storefront bot plus `supabase/functions/order-issue-notify`.
 
 ## Local development
 

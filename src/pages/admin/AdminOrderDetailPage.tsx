@@ -32,6 +32,8 @@ export default function AdminOrderDetailPage() {
   const [notes, setNotes] = useState('');
   const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<string>('');
   const [deliveryTrackingUrl, setDeliveryTrackingUrl] = useState('');
+  const [issueMessage, setIssueMessage] = useState('');
+  const [isNotifyingIssue, setIsNotifyingIssue] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
 
@@ -147,6 +149,26 @@ export default function AdminOrderDetailPage() {
 
   const rejectPayment = async () => {
     setStatus('pending');
+  };
+
+  const notifyIssue = async () => {
+    if (!order || !issueMessage.trim()) return;
+    setIsNotifyingIssue(true);
+    try {
+      const { error } = await supabase.functions.invoke('order-issue-notify', {
+        body: {
+          order_id: order.id,
+          message: issueMessage.trim(),
+        },
+      });
+      if (error) throw error;
+      toast({ description: 'Customer notified through Telegram.' });
+      setIssueMessage('');
+    } catch {
+      toast({ description: 'Failed to notify customer.', variant: 'destructive' });
+    } finally {
+      setIsNotifyingIssue(false);
+    }
   };
 
   if (!order) return <AdminLayout title="Order Detail"><div className="py-10 text-center text-sm text-muted-foreground">Loading...</div></AdminLayout>;
@@ -272,6 +294,26 @@ export default function AdminOrderDetailPage() {
             />
           </div>
         )}
+
+        <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm">
+          <h3 className="text-sm font-bold mb-2">Order Issue Relay</h3>
+          <p className="text-[11px] text-muted-foreground mb-2">
+            Send an issue notice to the customer through the storefront bot. Their reply will come back to your Telegram account through the bot.
+          </p>
+          <Textarea
+            value={issueMessage}
+            onChange={e => setIssueMessage(e.target.value)}
+            placeholder="Describe the issue, what the customer should reply with, or any instructions..."
+            className="text-sm h-20 resize-none mb-2"
+          />
+          <Button
+            onClick={notifyIssue}
+            disabled={isNotifyingIssue || !issueMessage.trim()}
+            className="btn-gradient"
+          >
+            {isNotifyingIssue ? 'Sending...' : 'Notify Customer via Telegram'}
+          </Button>
+        </div>
 
         {/* Notes */}
         <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm">
