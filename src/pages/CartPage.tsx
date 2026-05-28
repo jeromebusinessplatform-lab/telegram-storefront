@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,11 @@ import { Minus, Plus, Trash2, ShoppingBag, Tag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Voucher } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { validateVoucherRules } from '@/lib/voucher';
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, clearCart } = useCart();
+  const { customer } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -70,6 +73,14 @@ export default function CartPage() {
       setVoucherError(`Minimum order of ₱${v.min_order_amount.toFixed(2)} required`);
       setIsApplying(false);
       return;
+    }
+    if (customer?.id) {
+      const check = await validateVoucherRules(v, customer.id);
+      if (!check.ok) {
+        setVoucherError(check.message);
+        setIsApplying(false);
+        return;
+      }
     }
 
     setAppliedVoucher(v);

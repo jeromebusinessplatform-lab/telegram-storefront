@@ -1,6 +1,9 @@
 -- Voucher traceability, revocation, and audit logging
 alter table if exists vouchers
   add column if not exists internal_voucher_uid uuid not null default gen_random_uuid(),
+  add column if not exists single_use boolean not null default false,
+  add column if not exists allow_returning_customers boolean not null default true,
+  add column if not exists max_users integer null,
   add column if not exists starts_at timestamptz null,
   add column if not exists revoked boolean not null default false,
   add column if not exists revoked_at timestamptz null,

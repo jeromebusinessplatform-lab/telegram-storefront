@@ -13,7 +13,24 @@ import { Plus, Pencil, Trash2, Tag, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
-const EMPTY = {
+type VoucherForm = {
+  code: string;
+  internal_voucher_uid: string;
+  discount_type: 'fixed' | 'percent';
+  discount_value: string;
+  max_uses: string;
+  min_order_amount: string;
+  starts_at: string;
+  expiry_date: string;
+  auto_start: boolean;
+  auto_end: boolean;
+  single_use: boolean;
+  allow_returning_customers: boolean;
+  max_users: string;
+  is_active: boolean;
+};
+
+const EMPTY: VoucherForm = {
   code: '',
   internal_voucher_uid: crypto.randomUUID(),
   discount_type: 'fixed',
@@ -24,6 +41,9 @@ const EMPTY = {
   expiry_date: '',
   auto_start: false,
   auto_end: false,
+  single_use: false,
+  allow_returning_customers: true,
+  max_users: '',
   is_active: true,
 };
 
@@ -73,10 +93,13 @@ export default function AdminVouchersPage() {
       discount_value: String(v.discount_value),
       max_uses: String(v.max_uses ?? ''),
       min_order_amount: String(v.min_order_amount),
+      max_users: String(v.max_users ?? ''),
       starts_at: v.starts_at ? new Date(v.starts_at).toISOString().slice(0, 16) : '',
       expiry_date: v.expiry_date ? new Date(v.expiry_date).toISOString().slice(0, 16) : '',
       auto_start: Boolean(v.starts_at),
       auto_end: Boolean(v.expiry_date),
+      single_use: Boolean(v.single_use),
+      allow_returning_customers: v.allow_returning_customers ?? true,
       is_active: v.is_active,
     });
     setShowForm(true);
@@ -86,14 +109,18 @@ export default function AdminVouchersPage() {
     if (!form.code || !form.discount_value) { toast({ description: 'Code and discount value required', variant: 'destructive' }); return; }
     if (form.auto_start && !form.starts_at) { toast({ description: 'Start date/time is required when auto start is enabled', variant: 'destructive' }); return; }
     if (form.auto_end && !form.expiry_date) { toast({ description: 'End date/time is required when auto end is enabled', variant: 'destructive' }); return; }
+    if (form.max_users && Number(form.max_users) < 1) { toast({ description: 'Number of users must be at least 1', variant: 'destructive' }); return; }
     setIsSaving(true);
-    const payload = {
+      const payload = {
       code: form.code.trim().toUpperCase(),
       internal_voucher_uid: form.internal_voucher_uid ?? crypto.randomUUID(),
       discount_type: form.discount_type as 'percent' | 'fixed',
       discount_value: parseFloat(form.discount_value),
       max_uses: form.max_uses ? parseInt(form.max_uses) : null,
       min_order_amount: parseFloat(form.min_order_amount) || 0,
+      max_users: form.max_users ? parseInt(form.max_users) : null,
+      single_use: Boolean(form.single_use),
+      allow_returning_customers: Boolean(form.allow_returning_customers),
       starts_at: form.auto_start && form.starts_at ? new Date(form.starts_at).toISOString() : null,
       expiry_date: form.auto_end && form.expiry_date ? new Date(form.expiry_date).toISOString() : null,
       is_active: editVoucher?.revoked ? false : form.is_active,
@@ -109,7 +136,7 @@ export default function AdminVouchersPage() {
         voucher_uid: payload.internal_voucher_uid,
         action: 'updated',
         reason: 'Edited in admin panel',
-        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date },
+        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
       });
       toast({ description: 'Voucher updated!' });
     } else {
@@ -121,7 +148,7 @@ export default function AdminVouchersPage() {
           voucher_uid: (data as unknown as Voucher).internal_voucher_uid ?? payload.internal_voucher_uid,
           action: 'created',
           reason: 'Created in admin panel',
-          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date },
+          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
         });
       }
       toast({ description: 'Voucher created!' });
@@ -222,6 +249,12 @@ export default function AdminVouchersPage() {
                   {v.discount_type === 'percent' ? `${v.discount_value}% off` : `₱${v.discount_value} off`}
                   {v.min_order_amount > 0 && ` · Min ₱${v.min_order_amount}`}
                   {v.max_uses != null && ` · ${v.used_count}/${v.max_uses} used`}
+                  {v.max_users != null && ` · max ${v.max_users} users`}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {v.single_use ? 'Single use only' : 'Multi-use allowed'}
+                  {' · '}
+                  {v.allow_returning_customers === false ? 'New customers only' : 'Returning customers allowed'}
                 </p>
                 <p className="text-[11px] text-muted-foreground font-mono break-all">
                   UID: {v.internal_voucher_uid ?? 'N/A'}
@@ -280,9 +313,19 @@ export default function AdminVouchersPage() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <Switch checked={form.single_use} onCheckedChange={v => setForm(p => ({ ...p, single_use: v }))} />
+                <Label className="text-xs">Single Use Only</Label>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <Switch checked={form.allow_returning_customers} onCheckedChange={v => setForm(p => ({ ...p, allow_returning_customers: v }))} />
+                <Label className="text-xs">Allow Returning Customers</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">Type</Label>
-                <Select value={form.discount_type} onValueChange={v => setForm(p => ({ ...p, discount_type: v }))}>
+                <Select value={form.discount_type} onValueChange={v => setForm(p => ({ ...p, discount_type: v as VoucherForm['discount_type'] }))}>
                   <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fixed">Fixed (₱)</SelectItem>
@@ -304,6 +347,10 @@ export default function AdminVouchersPage() {
                 <Label className="text-xs">Min Order (₱)</Label>
                 <Input type="number" value={form.min_order_amount} onChange={e => setForm(p => ({ ...p, min_order_amount: e.target.value }))} placeholder="0" className="mt-1 h-8 text-sm" />
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">Number of Users</Label>
+              <Input type="number" value={form.max_users} onChange={e => setForm(p => ({ ...p, max_users: e.target.value }))} placeholder="Unlimited" className="mt-1 h-8 text-sm" min="1" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} />

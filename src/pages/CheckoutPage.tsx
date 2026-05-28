@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import AddressSection from '@/components/common/AddressSection';
 import { generateOrderNumber } from '@/lib/order-number';
 import { formatShippingAddress } from '@/lib/address';
+import { validateVoucherRules } from '@/lib/voucher';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
 
@@ -236,6 +237,11 @@ export default function CheckoutPage() {
       }
       if (voucher.max_uses != null && voucher.used_count >= voucher.max_uses) {
         toast({ description: 'This voucher has reached its usage limit', variant: 'destructive' });
+        return;
+      }
+      const eligibility = await validateVoucherRules(voucher, customer.id);
+      if (!eligibility.ok) {
+        toast({ description: eligibility.message, variant: 'destructive' });
         return;
       }
     }

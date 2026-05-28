@@ -200,6 +200,9 @@ export interface Voucher {
   max_uses?: number;
   used_count: number;
   min_order_amount: number;
+  single_use?: boolean;
+  allow_returning_customers?: boolean;
+  max_users?: number | null;
   starts_at?: string | null;
   expiry_date?: string;
   is_active: boolean;
