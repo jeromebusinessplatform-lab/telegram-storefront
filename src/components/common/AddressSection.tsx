@@ -281,20 +281,6 @@ export default function AddressSection({
         </div>
       )}
 
-      {/* Name + Phone */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-[11px]">Full Name *</Label>
-          <Input value={address.name} onChange={e => onChange({ ...address, name: e.target.value })} placeholder="Juan dela Cruz" className="h-8 text-xs mt-0.5" />
-        </div>
-        {(!cfg || cfg.show_phone) && (
-          <div>
-            <Label className="text-[11px]">Phone *</Label>
-            <Input value={address.phone} onChange={e => onChange({ ...address, phone: e.target.value })} placeholder="09XX" className="h-8 text-xs mt-0.5" />
-          </div>
-        )}
-      </div>
-
       {/* Search + Drop Pin */}
       {(!cfg || cfg.show_address) && (
         <div className="relative">

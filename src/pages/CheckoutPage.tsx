@@ -379,11 +379,11 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Delivery Address */}
+        {/* STEP 2: Delivery Details */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
           <div className="flex items-center gap-2 mb-3">
             <Truck className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-foreground">Delivery Address</h2>
+            <h2 className="text-sm font-bold text-foreground">Step 2 | Delivery Details</h2>
           </div>
           <AddressSection
             address={address}
@@ -397,122 +397,120 @@ export default function CheckoutPage() {
             saveForFuture={saveForFuture}
             onSaveForFutureChange={setSaveForFuture}
           />
-        </div>
-
-        {/* Delivery Method — 3×3 grid */}
-        <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Truck className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-bold text-foreground">Delivery Method</h2>
+          <div className="mt-3 rounded-xl border border-border bg-background p-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-foreground">Delivery Method</p>
+                <p className="text-[11px] text-muted-foreground">Select a provider after the fee is calculated.</p>
+              </div>
+              {isCalculatingFee && (
+                <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Calculating...
+                </span>
+              )}
             </div>
-            {isCalculatingFee && (
-              <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Calculating...
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {deliveryProviders.map(dp => {
-              const isSelected = selectedDelivery?.id === dp.id;
-              const logo = (dp as unknown as { logo_url?: string }).logo_url ?? dp.config?.logo_url;
-              const quote = providerQuotes[dp.id];
-              const shownFee = isDynamic(dp.type) ? quote?.fee ?? null : (dp.config?.fee ?? 0);
-              return (
-                <button
-                  key={dp.id}
-                  onClick={() => {
-                    setSelectedDelivery(dp);
-                    if (!isDynamic(dp.type)) {
-                      setDeliveryFee(dp.config?.fee ?? 0);
-                      setDeliveryDistance(null);
-                      setDeliveryBreakdown(null);
-                    } else {
-                      const quote = providerQuotes[dp.id];
-                      if (quote) {
-                        setDeliveryFee(quote.fee);
-                        setDeliveryDistance(quote.distance_km);
-                        setTrafficActive(quote.traffic_active);
-                        setDeliveryBreakdown(quote.breakdown);
-                      } else {
-                        setDeliveryFee(0);
+            <div className="grid grid-cols-3 gap-2">
+              {deliveryProviders.map(dp => {
+                const isSelected = selectedDelivery?.id === dp.id;
+                const logo = (dp as unknown as { logo_url?: string }).logo_url ?? dp.config?.logo_url;
+                const quote = providerQuotes[dp.id];
+                const shownFee = isDynamic(dp.type) ? quote?.fee ?? null : (dp.config?.fee ?? 0);
+                return (
+                  <button
+                    key={dp.id}
+                    onClick={() => {
+                      setSelectedDelivery(dp);
+                      if (!isDynamic(dp.type)) {
+                        setDeliveryFee(dp.config?.fee ?? 0);
                         setDeliveryDistance(null);
-                        setTrafficActive(false);
                         setDeliveryBreakdown(null);
+                      } else {
+                        const quote = providerQuotes[dp.id];
+                        if (quote) {
+                          setDeliveryFee(quote.fee);
+                          setDeliveryDistance(quote.distance_km);
+                          setTrafficActive(quote.traffic_active);
+                          setDeliveryBreakdown(quote.breakdown);
+                        } else {
+                          setDeliveryFee(0);
+                          setDeliveryDistance(null);
+                          setTrafficActive(false);
+                          setDeliveryBreakdown(null);
+                        }
                       }
-                    }
-                  }}
-                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all ${isSelected ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
-                >
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                    {logo ? (
-                      <img src={logo} alt={dp.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-                    ) : (
-                      <Truck className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all ${isSelected ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
+                  >
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                      {logo ? (
+                        <img src={logo} alt={dp.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                      ) : (
+                        <Truck className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                      )}
+                    </div>
+                    <p className={`text-[10px] font-bold leading-tight text-center line-clamp-2 ${isSelected ? 'text-primary' : 'text-foreground'}`}>{dp.name}</p>
+                    {shownFee != null && (
+                      <span className="text-[10px] font-bold text-primary">
+                        ₱{shownFee.toFixed(2)}
+                        {isSelected && deliveryDistance != null && ` · ${deliveryDistance}km`}
+                      </span>
                     )}
+                    {isDynamic(dp.type) && shownFee == null && !isCalculatingFee && (
+                      <span className="text-[10px] text-muted-foreground">Enter address</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDelivery && (
+              <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Delivery Fee Payment</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Choose whether the delivery fee is paid now or upon fulfillment.
+                    </p>
                   </div>
-                  <p className={`text-[10px] font-bold leading-tight text-center line-clamp-2 ${isSelected ? 'text-primary' : 'text-foreground'}`}>{dp.name}</p>
-                  {shownFee != null && (
-                    <span className="text-[10px] font-bold text-primary">
-                      ₱{shownFee.toFixed(2)}
-                      {isSelected && deliveryDistance != null && ` · ${deliveryDistance}km`}
-                    </span>
-                  )}
-                  {isDynamic(dp.type) && shownFee == null && !isCalculatingFee && (
-                    <span className="text-[10px] text-muted-foreground">Enter address</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {selectedDelivery && (
-            <div className="mt-3 rounded-xl border border-border bg-background p-3 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-foreground">Delivery Fee Payment</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Choose whether the delivery fee is paid now or upon fulfillment.
-                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryFeeMode('pay_now')}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'pay_now' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
+                  >
+                    <p className="text-xs font-bold text-foreground">Pay now</p>
+                    <p className="text-[11px] text-muted-foreground">Add the delivery fee to the order total</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryFeeMode('upon_fulfillment')}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'upon_fulfillment' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
+                  >
+                    <p className="text-xs font-bold text-foreground">Upon fulfillment</p>
+                    <p className="text-[11px] text-muted-foreground">Keep fee due later after delivery</p>
+                  </button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDeliveryFeeMode('pay_now')}
-                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'pay_now' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
-                >
-                  <p className="text-xs font-bold text-foreground">Pay now</p>
-                  <p className="text-[11px] text-muted-foreground">Add the delivery fee to the order total</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeliveryFeeMode('upon_fulfillment')}
-                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'upon_fulfillment' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
-                >
-                  <p className="text-xs font-bold text-foreground">Upon fulfillment</p>
-                  <p className="text-[11px] text-muted-foreground">Keep fee due later after delivery</p>
-                </button>
+            )}
+            {trafficActive && (
+              <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 rounded-lg px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+                  Traffic adjustment applied based on the selected delivery provider settings
+                </p>
               </div>
-            </div>
-          )}
-          {trafficActive && (
-            <div className="mt-2 flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 rounded-lg px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
-                Traffic adjustment applied based on the selected delivery provider settings
-              </p>
-            </div>
-          )}
-          {selectedDelivery && selectedDelivery.config?.instructions && (
-            <p className="text-[11px] text-muted-foreground mt-2 px-1">{selectedDelivery.config.instructions}</p>
-          )}
+            )}
+            {selectedDelivery && selectedDelivery.config?.instructions && (
+              <p className="text-[11px] text-muted-foreground mt-2 px-1">{selectedDelivery.config.instructions}</p>
+            )}
+          </div>
         </div>
 
-        {/* Payment Method */}
+        {/* STEP 3: Payment Method */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
           <div className="flex items-center gap-2 mb-3">
             <CreditCard className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-foreground">Payment Method</h2>
+            <h2 className="text-sm font-bold text-foreground">Step 3 | Payment Method</h2>
           </div>
           <div className="space-y-2">
             {paymentMethods.map(pm => (
@@ -527,9 +525,9 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Order Summary */}
+        {/* STEP 4: Order Summary */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">
-          <h2 className="text-sm font-bold text-foreground mb-2">Order Summary</h2>
+          <h2 className="text-sm font-bold text-foreground mb-2">Step 4 | Order Summary</h2>
           <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal ({items.length} items)</span><span className="font-semibold">₱{subtotal.toFixed(2)}</span></div>
           {fees.map((f, i) => (
             <div key={i} className="flex justify-between text-xs">
