@@ -1,0 +1,44 @@
+-- Voucher traceability, revocation, and audit logging
+alter table if exists vouchers
+  add column if not exists internal_voucher_uid uuid not null default gen_random_uuid(),
+  add column if not exists revoked boolean not null default false,
+  add column if not exists revoked_at timestamptz null,
+  add column if not exists revoked_reason text null;
+
+create unique index if not exists vouchers_internal_voucher_uid_key
+  on vouchers (internal_voucher_uid);
+
+alter table if exists orders
+  add column if not exists voucher_id uuid null references vouchers(id) on delete set null;
+
+create table if not exists voucher_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  voucher_id uuid not null references vouchers(id) on delete cascade,
+  voucher_uid uuid null,
+  order_id uuid null references orders(id) on delete set null,
+  action text not null,
+  reason text null,
+  actor_type text not null default 'admin',
+  actor_identifier text null,
+  meta jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table voucher_audit_logs enable row level security;
+drop policy if exists voucher_audit_logs_select_all on voucher_audit_logs;
+drop policy if exists voucher_audit_logs_insert_all on voucher_audit_logs;
+drop policy if exists voucher_audit_logs_update_all on voucher_audit_logs;
+drop policy if exists voucher_audit_logs_delete_all on voucher_audit_logs;
+create policy voucher_audit_logs_select_admin_only
+  on voucher_audit_logs for select
+  using (public.is_admin());
+create policy voucher_audit_logs_insert_admin_only
+  on voucher_audit_logs for insert
+  with check (public.is_admin());
+create policy voucher_audit_logs_update_admin_only
+  on voucher_audit_logs for update
+  using (public.is_admin())
+  with check (public.is_admin());
+create policy voucher_audit_logs_delete_admin_only
+  on voucher_audit_logs for delete
+  using (public.is_admin());

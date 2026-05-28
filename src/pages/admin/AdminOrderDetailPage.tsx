@@ -40,6 +40,45 @@ export default function AdminOrderDetailPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showPaymentProof, setShowPaymentProof] = useState(false);
 
+  const logVoucherAudit = async (payload: {
+    voucher_id: string;
+    voucher_uid?: string | null;
+    order_id?: string | null;
+    action: string;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+  }) => {
+    await supabase.from('voucher_audit_logs').insert({
+      ...payload,
+      actor_type: 'admin',
+      actor_identifier: 'admin-panel',
+    });
+  };
+
+  const restoreVoucherUsage = async (voucherId?: string | null, voucherCode?: string | null, reason?: string) => {
+    if (!voucherId && !voucherCode) return;
+    const q = voucherId
+      ? supabase.from('vouchers').select('*').eq('id', voucherId).maybeSingle()
+      : supabase.from('vouchers').select('*').eq('code', voucherCode ?? '').maybeSingle();
+    const { data: voucher } = await q;
+    if (!voucher) return;
+    const v = voucher as { id: string; code: string; internal_voucher_uid?: string | null; used_count?: number | null; is_active?: boolean | null; revoked?: boolean | null; revoked_at?: string | null };
+    if (v.revoked) return;
+    const nextUsed = Math.max(0, (v.used_count ?? 0) - 1);
+    await supabase.from('vouchers').update({
+      used_count: nextUsed,
+      is_active: true,
+    }).eq('id', v.id);
+    await logVoucherAudit({
+      voucher_id: v.id,
+      voucher_uid: v.internal_voucher_uid ?? null,
+      order_id: order?.id ?? null,
+      action: 'restored',
+      reason: reason ?? 'Order was cancelled or rejected',
+      metadata: { order_number: order?.order_number, next_used_count: nextUsed },
+    });
+  };
+
   useEffect(() => {
     if (!id) return;
     supabase.from('orders').select('*, customers(*), payment_methods(*), delivery_providers(*)').eq('id', id).maybeSingle().then(({ data }) => {
@@ -58,10 +97,18 @@ export default function AdminOrderDetailPage() {
     if (!order) return;
     setIsSaving(true);
 
+    const previousStatus = order.status;
     const parsedOverride = Number(deliveryFeeOverride);
     const newDeliveryFee = Number.isFinite(parsedOverride) ? Math.max(0, parsedOverride) : order.delivery_fee;
     const feeDiff = newDeliveryFee - order.delivery_fee;
     const newTotal = Math.max(0, order.total + feeDiff);
+    const shouldRestoreVoucher =
+      previousStatus !== 'cancelled'
+      && Boolean(order.voucher_code || order.voucher_id)
+      && (
+        status === 'cancelled'
+        || (previousStatus === 'payment_submitted' && status === 'pending')
+      );
     await supabase.from('orders').update({
       status,
       notes,
@@ -69,6 +116,10 @@ export default function AdminOrderDetailPage() {
       total: newTotal,
       delivery_tracking_url: deliveryTrackingUrl.trim() || null,
     }).eq('id', order.id);
+
+    if (shouldRestoreVoucher) {
+      await restoreVoucherUsage(order.voucher_id ?? null, order.voucher_code ?? null, 'Order cancelled by admin');
+    }
 
     // Handle referral rewards on first delivery
     if (status === 'delivered' && order.status !== 'delivered') {

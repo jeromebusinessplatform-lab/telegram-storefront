@@ -4,15 +4,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { Voucher } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tag, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
-const EMPTY = { code: '', discount_type: 'fixed', discount_value: '', max_uses: '', min_order_amount: '0', expiry_date: '', is_active: true };
+const EMPTY = {
+  code: '',
+  internal_voucher_uid: crypto.randomUUID(),
+  discount_type: 'fixed',
+  discount_value: '',
+  max_uses: '',
+  min_order_amount: '0',
+  expiry_date: '',
+  is_active: true,
+};
 
 function generateCode() {
   return 'VC' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -24,6 +34,7 @@ export default function AdminVouchersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [revokeVoucherId, setRevokeVoucherId] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,10 +44,33 @@ export default function AdminVouchersPage() {
     });
   }, []);
 
-  const openAdd = () => { setEditVoucher(null); setForm({ ...EMPTY, code: generateCode() }); setShowForm(true); };
+  const auditVoucher = async (payload: {
+    voucher_id: string;
+    voucher_uid?: string | null;
+    action: string;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+  }) => {
+    await supabase.from('voucher_audit_logs').insert({
+      ...payload,
+      actor_type: 'admin',
+      actor_identifier: 'admin-panel',
+    });
+  };
+
+  const openAdd = () => { setEditVoucher(null); setForm({ ...EMPTY, code: generateCode(), internal_voucher_uid: crypto.randomUUID() }); setShowForm(true); };
   const openEdit = (v: Voucher) => {
     setEditVoucher(v);
-    setForm({ code: v.code, discount_type: v.discount_type, discount_value: String(v.discount_value), max_uses: String(v.max_uses ?? ''), min_order_amount: String(v.min_order_amount), expiry_date: v.expiry_date ? v.expiry_date.split('T')[0] : '', is_active: v.is_active });
+    setForm({
+      code: v.code,
+      internal_voucher_uid: v.internal_voucher_uid ?? crypto.randomUUID(),
+      discount_type: v.discount_type,
+      discount_value: String(v.discount_value),
+      max_uses: String(v.max_uses ?? ''),
+      min_order_amount: String(v.min_order_amount),
+      expiry_date: v.expiry_date ? v.expiry_date.split('T')[0] : '',
+      is_active: v.is_active,
+    });
     setShowForm(true);
   };
 
@@ -45,36 +79,100 @@ export default function AdminVouchersPage() {
     setIsSaving(true);
     const payload = {
       code: form.code.trim().toUpperCase(),
+      internal_voucher_uid: form.internal_voucher_uid ?? crypto.randomUUID(),
       discount_type: form.discount_type as 'percent' | 'fixed',
       discount_value: parseFloat(form.discount_value),
       max_uses: form.max_uses ? parseInt(form.max_uses) : null,
       min_order_amount: parseFloat(form.min_order_amount) || 0,
       expiry_date: form.expiry_date ? new Date(form.expiry_date).toISOString() : null,
-      is_active: form.is_active,
+      is_active: editVoucher?.revoked ? false : form.is_active,
+      revoked: editVoucher?.revoked ?? false,
+      revoked_at: editVoucher?.revoked_at ?? null,
+      revoked_reason: editVoucher?.revoked_reason ?? null,
     };
     if (editVoucher) {
       await supabase.from('vouchers').update(payload).eq('id', editVoucher.id);
       setVouchers(p => p.map(v => v.id === editVoucher.id ? { ...v, ...payload } : v));
+      await auditVoucher({
+        voucher_id: editVoucher.id,
+        voucher_uid: payload.internal_voucher_uid,
+        action: 'updated',
+        reason: 'Edited in admin panel',
+        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value },
+      });
       toast({ description: 'Voucher updated!' });
     } else {
       const { data } = await supabase.from('vouchers').insert(payload).select().maybeSingle();
       if (data) setVouchers(p => [data as unknown as Voucher, ...p]);
+      if (data) {
+        await auditVoucher({
+          voucher_id: data.id,
+          voucher_uid: (data as unknown as Voucher).internal_voucher_uid ?? payload.internal_voucher_uid,
+          action: 'created',
+          reason: 'Created in admin panel',
+          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value },
+        });
+      }
       toast({ description: 'Voucher created!' });
     }
     setShowForm(false);
     setIsSaving(false);
   };
 
+  const copyVoucherUid = async (uid?: string | null) => {
+    if (!uid) return;
+    await navigator.clipboard.writeText(uid);
+    toast({ description: 'Voucher UID copied' });
+  };
+
   const toggleActive = async (v: Voucher) => {
+    if (v.revoked) return;
     await supabase.from('vouchers').update({ is_active: !v.is_active }).eq('id', v.id);
     setVouchers(p => p.map(x => x.id === v.id ? { ...x, is_active: !v.is_active } : x));
+    await auditVoucher({
+      voucher_id: v.id,
+      voucher_uid: v.internal_voucher_uid ?? null,
+      action: !v.is_active ? 'activated' : 'deactivated',
+      reason: !v.is_active ? 'Activated from admin panel' : 'Deactivated from admin panel',
+      metadata: { code: v.code },
+    });
   };
 
   const deleteVoucher = async () => {
     if (!deleteId) return;
-    await supabase.from('vouchers').delete().eq('id', deleteId);
-    setVouchers(p => p.filter(v => v.id !== deleteId));
+    const voucher = vouchers.find(v => v.id === deleteId);
+    if (!voucher) return;
+    if (revokeVoucherId) {
+      const revoked_at = new Date().toISOString();
+      await supabase.from('vouchers').update({
+        is_active: false,
+        revoked: true,
+        revoked_at,
+        revoked_reason: 'Revoked from admin panel',
+      }).eq('id', deleteId);
+      setVouchers(p => p.map(v => v.id === deleteId ? { ...v, is_active: false, revoked: true, revoked_at, revoked_reason: 'Revoked from admin panel' } : v));
+      await auditVoucher({
+        voucher_id: voucher.id,
+        voucher_uid: voucher.internal_voucher_uid ?? null,
+        action: 'revoked',
+        reason: 'Revoked from admin panel',
+        metadata: { code: voucher.code },
+      });
+    } else {
+      await supabase.from('vouchers').update({
+        is_active: false,
+      }).eq('id', deleteId);
+      setVouchers(p => p.map(v => v.id === deleteId ? { ...v, is_active: false } : v));
+      await auditVoucher({
+        voucher_id: voucher.id,
+        voucher_uid: voucher.internal_voucher_uid ?? null,
+        action: 'deactivated',
+        reason: 'Deactivated from admin panel',
+        metadata: { code: voucher.code },
+      });
+    }
     setDeleteId(null);
+    setRevokeVoucherId(false);
   };
 
   return (
@@ -94,22 +192,35 @@ export default function AdminVouchersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-black font-mono text-foreground">{v.code}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyVoucherUid(v.internal_voucher_uid)}
+                    className="h-6 px-1.5 text-[10px] gap-1 text-muted-foreground hover:text-primary"
+                  >
+                    <Copy className="w-3 h-3" />
+                    UID
+                  </Button>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${v.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {v.is_active ? 'Active' : 'Inactive'}
                   </span>
                   {v.is_referral && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">Referral</span>}
+                  {v.revoked && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">Revoked</span>}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {v.discount_type === 'percent' ? `${v.discount_value}% off` : `₱${v.discount_value} off`}
                   {v.min_order_amount > 0 && ` · Min ₱${v.min_order_amount}`}
                   {v.max_uses != null && ` · ${v.used_count}/${v.max_uses} used`}
                 </p>
+                <p className="text-[11px] text-muted-foreground font-mono break-all">
+                  UID: {v.internal_voucher_uid ?? 'N/A'}
+                </p>
                 {v.expiry_date && <p className="text-[11px] text-muted-foreground">Expires: {new Date(v.expiry_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
               </div>
               <div className="flex items-center gap-1.5">
-                <Switch checked={v.is_active} onCheckedChange={() => toggleActive(v)} className="scale-75" />
+                <Switch checked={v.is_active} onCheckedChange={() => toggleActive(v)} className="scale-75" disabled={Boolean(v.revoked)} />
                 <Button size="sm" variant="ghost" onClick={() => openEdit(v)} className="w-7 h-7 p-0 hover:bg-primary-light hover:text-primary"><Pencil className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="ghost" onClick={() => setDeleteId(v.id)} className="w-7 h-7 p-0 hover:bg-destructive/10 hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => { setDeleteId(v.id); setRevokeVoucherId(false); }} className="w-7 h-7 p-0 hover:bg-destructive/10 hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
               </div>
             </div>
           </div>
@@ -127,6 +238,10 @@ export default function AdminVouchersPage() {
                 <Input value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="VOUCHER123" className="h-8 text-sm font-mono uppercase" />
                 <Button size="sm" variant="outline" onClick={() => setForm(p => ({ ...p, code: generateCode() }))} className="h-8 text-xs px-2 flex-shrink-0">Gen</Button>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">Internal Voucher UID</Label>
+              <Input value={form.internal_voucher_uid} readOnly className="mt-1 h-8 text-sm font-mono bg-muted" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -172,10 +287,17 @@ export default function AdminVouchersPage() {
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Voucher?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Deactivate Voucher?</AlertDialogTitle><AlertDialogDescription>You can only deactivate it, or revoke the internal voucher ID so it can no longer be used.</AlertDialogDescription></AlertDialogHeader>
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 p-3">
+            <Checkbox id="revoke-voucher" checked={revokeVoucherId} onCheckedChange={v => setRevokeVoucherId(Boolean(v))} />
+            <Label htmlFor="revoke-voucher" className="text-xs leading-tight">
+              Revoke voucher ID
+              <span className="block text-[11px] text-muted-foreground">This makes the voucher unusable even if it is reactivated later.</span>
+            </Label>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteVoucher} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={deleteVoucher} className="bg-destructive text-destructive-foreground">Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

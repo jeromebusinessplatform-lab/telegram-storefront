@@ -219,6 +219,22 @@ export default function CheckoutPage() {
     if (isDynamic(selectedDelivery.type) && deliveryFee === 0) {
       toast({ description: 'Delivery fee not calculated. Please confirm your address.', variant: 'destructive' }); return;
     }
+    if (appliedVoucher) {
+      const { data: liveVoucher } = await supabase.from('vouchers').select('*').eq('id', appliedVoucher.id).maybeSingle();
+      const voucher = liveVoucher as Voucher | null;
+      if (!voucher || !voucher.is_active || voucher.revoked || voucher.revoked_at) {
+        toast({ description: 'Voucher is no longer valid. Please apply a new code.', variant: 'destructive' });
+        return;
+      }
+      if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
+        toast({ description: 'This voucher has expired', variant: 'destructive' });
+        return;
+      }
+      if (voucher.max_uses != null && voucher.used_count >= voucher.max_uses) {
+        toast({ description: 'This voucher has reached its usage limit', variant: 'destructive' });
+        return;
+      }
+    }
 
     setIsPlacing(true);
     try {
@@ -244,6 +260,7 @@ export default function CheckoutPage() {
         subtotal,
         fees_applied: fees,
         voucher_code: appliedVoucher?.code ?? null,
+        voucher_id: appliedVoucher?.id ?? null,
         voucher_discount: voucherDiscount,
         delivery_fee: deliveryFee,
         delivery_fee_payment_mode: deliveryFeeMode,
@@ -259,6 +276,16 @@ export default function CheckoutPage() {
 
       if (appliedVoucher) {
         await supabase.from('vouchers').update({ used_count: appliedVoucher.used_count + 1 }).eq('id', appliedVoucher.id);
+        await supabase.from('voucher_audit_logs').insert({
+          voucher_id: appliedVoucher.id,
+          voucher_uid: appliedVoucher.internal_voucher_uid ?? null,
+          order_id: order.id,
+          action: 'used',
+          reason: 'Applied during checkout',
+          actor_type: 'customer',
+          actor_identifier: customer.id,
+          meta: { order_number: order.order_number, voucher_code: appliedVoucher.code },
+        });
       }
 
       if (saveForFuture) {

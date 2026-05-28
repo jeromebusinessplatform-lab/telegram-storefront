@@ -36,6 +36,7 @@ export default function CartPage() {
       .select('*')
       .eq('code', voucherCode.trim().toUpperCase())
       .eq('is_active', true)
+      .eq('revoked', false)
       .maybeSingle();
 
     if (!data) {
@@ -45,6 +46,11 @@ export default function CartPage() {
     }
 
     const v = data as unknown as Voucher;
+    if (v.revoked || v.revoked_at) {
+      setVoucherError('This voucher has been revoked');
+      setIsApplying(false);
+      return;
+    }
     if (v.expiry_date && new Date(v.expiry_date) < new Date()) {
       setVoucherError('This voucher has expired');
       setIsApplying(false);

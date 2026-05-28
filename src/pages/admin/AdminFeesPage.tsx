@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
 const EMPTY = { name: '', category: 'charge', value_type: 'fixed', value: '', is_active: true, applies_always: true };
+const PREVIEW_BASE = 1000;
 
 const CATEGORY_COLORS: Record<string, string> = {
   charge: 'bg-orange-100 text-orange-700',
@@ -28,6 +29,9 @@ export default function AdminFeesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [isSaving, setIsSaving] = useState(false);
+  const previewValue = form.value ? parseFloat(form.value) || 0 : 0;
+  const previewAmount = form.value_type === 'percent' ? (PREVIEW_BASE * previewValue) / 100 : previewValue;
+  const previewSignedAmount = form.category === 'discount' ? -previewAmount : previewAmount;
 
   useEffect(() => {
     supabase.from('fees_config').select('*').order('created_at').then(({ data }) => {
@@ -74,7 +78,7 @@ export default function AdminFeesPage() {
   return (
     <AdminLayout title="Fees & Charges">
       <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => { setEditFee(null); setForm(EMPTY); setShowForm(true); }} className="btn-gradient gap-1.5"><Plus className="w-3.5 h-3.5" /> Add Fee/Charge</Button>
+        <Button size="sm" onClick={() => { setEditFee(null); setForm(EMPTY); setShowForm(true); }} className="btn-gradient gap-1.5"><Plus className="w-3.5 h-3.5" /> Add Charge / Discount</Button>
       </div>
 
       <div className="space-y-2">
@@ -105,7 +109,7 @@ export default function AdminFeesPage() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editFee ? 'Edit' : 'Add'} Fee / Charge</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editFee ? 'Edit' : 'Add'} Charge / Discount</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Service Charge" className="mt-1 h-8 text-sm" /></div>
             <div>
@@ -113,8 +117,8 @@ export default function AdminFeesPage() {
               <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="charge">Charge (add to total)</SelectItem>
-                  <SelectItem value="discount">Discount (subtract)</SelectItem>
+                  <SelectItem value="charge">Charge (adds to total)</SelectItem>
+                  <SelectItem value="discount">Discount (deducts from total)</SelectItem>
                   <SelectItem value="fee">Fee (informational)</SelectItem>
                 </SelectContent>
               </Select>
@@ -131,6 +135,15 @@ export default function AdminFeesPage() {
                 </Select>
               </div>
               <div><Label className="text-xs">Value *</Label><Input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} placeholder={form.value_type === 'percent' ? '5' : '50'} className="mt-1 h-8 text-sm" /></div>
+            </div>
+            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2">
+              <p className="text-[11px] font-bold text-foreground">Live preview on ₱{PREVIEW_BASE.toFixed(2)}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {form.value_type === 'percent' ? `${previewValue}%` : `₱${previewValue.toFixed(2)}`} {form.category === 'discount' ? 'discounts' : 'charges'} {form.category === 'discount' ? 'subtract' : 'add'} {previewAmount > 0 ? `₱${previewAmount.toFixed(2)}` : '₱0.00'}.
+              </p>
+              <p className={`text-[11px] font-semibold mt-1 ${previewSignedAmount < 0 ? 'text-green-600' : 'text-primary'}`}>
+                Net effect: {previewSignedAmount < 0 ? '-' : '+'}₱{Math.abs(previewSignedAmount).toFixed(2)}
+              </p>
             </div>
             <div className="flex items-center gap-2"><Switch checked={form.applies_always} onCheckedChange={v => setForm(p => ({ ...p, applies_always: v }))} /><Label className="text-xs">Apply to all orders automatically</Label></div>
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} /><Label className="text-xs">Active</Label></div>

@@ -3323,6 +3323,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string | null
+          voucher_id: string | null
           voucher_code: string | null
           voucher_discount: number | null
         }
@@ -3346,6 +3347,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string | null
+          voucher_id?: string | null
           voucher_code?: string | null
           voucher_discount?: number | null
         }
@@ -3369,6 +3371,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string | null
+          voucher_id?: string | null
           voucher_code?: string | null
           voucher_discount?: number | null
         }
@@ -3600,7 +3603,11 @@ export type Database = {
           is_referral: boolean | null
           max_uses: number | null
           min_order_amount: number | null
+          internal_voucher_uid: string | null
           referrer_customer_code: string | null
+          revoked: boolean | null
+          revoked_at: string | null
+          revoked_reason: string | null
           used_count: number | null
         }
         Insert: {
@@ -3614,7 +3621,11 @@ export type Database = {
           is_referral?: boolean | null
           max_uses?: number | null
           min_order_amount?: number | null
+          internal_voucher_uid?: string | null
           referrer_customer_code?: string | null
+          revoked?: boolean | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
           used_count?: number | null
         }
         Update: {
@@ -3628,10 +3639,66 @@ export type Database = {
           is_referral?: boolean | null
           max_uses?: number | null
           min_order_amount?: number | null
+          internal_voucher_uid?: string | null
           referrer_customer_code?: string | null
+          revoked?: boolean | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
           used_count?: number | null
         }
         Relationships: []
+      }
+      voucher_audit_logs: {
+        Row: {
+          action: string
+          actor_identifier: string | null
+          actor_type: string
+          created_at: string
+          id: string
+          meta: Json
+          order_id: string | null
+          reason: string | null
+          voucher_id: string
+          voucher_uid: string | null
+        }
+        Insert: {
+          action: string
+          actor_identifier?: string | null
+          actor_type?: string
+          created_at?: string
+          id?: string
+          meta?: Json
+          order_id?: string | null
+          reason?: string | null
+          voucher_id: string
+          voucher_uid?: string | null
+        }
+        Update: {
+          action?: string
+          actor_identifier?: string | null
+          actor_type?: string
+          created_at?: string
+          id?: string
+          meta?: Json
+          order_id?: string | null
+          reason?: string | null
+          voucher_id?: string
+          voucher_uid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_audit_logs_order_id_fkey"
+            columns: ["order_id"]
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_audit_logs_voucher_id_fkey"
+            columns: ["voucher_id"]
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

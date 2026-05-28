@@ -194,6 +194,7 @@ export interface AppliedFee {
 export interface Voucher {
   id: string;
   code: string;
+  internal_voucher_uid?: string;
   discount_type: 'percent' | 'fixed';
   discount_value: number;
   max_uses?: number;
@@ -202,6 +203,9 @@ export interface Voucher {
   expiry_date?: string;
   is_active: boolean;
   is_referral: boolean;
+  revoked?: boolean;
+  revoked_at?: string | null;
+  revoked_reason?: string | null;
   referrer_customer_code?: string;
   created_at: string;
 }
@@ -254,6 +258,7 @@ export interface Order {
   subtotal: number;
   fees_applied: AppliedFee[];
   voucher_code?: string;
+  voucher_id?: string | null;
   voucher_discount: number;
   delivery_fee: number;
   delivery_fee_payment_mode?: DeliveryFeePaymentMode;
