@@ -226,6 +226,10 @@ export default function CheckoutPage() {
         toast({ description: 'Voucher is no longer valid. Please apply a new code.', variant: 'destructive' });
         return;
       }
+      if (voucher.starts_at && new Date(voucher.starts_at) > new Date()) {
+        toast({ description: 'This voucher is not active yet', variant: 'destructive' });
+        return;
+      }
       if (voucher.expiry_date && new Date(voucher.expiry_date) < new Date()) {
         toast({ description: 'This voucher has expired', variant: 'destructive' });
         return;

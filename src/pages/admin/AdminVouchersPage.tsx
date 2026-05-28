@@ -20,12 +20,17 @@ const EMPTY = {
   discount_value: '',
   max_uses: '',
   min_order_amount: '0',
+  starts_at: '',
   expiry_date: '',
+  auto_start: false,
+  auto_end: false,
   is_active: true,
 };
 
 function generateCode() {
-  return 'VC' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
 }
 
 export default function AdminVouchersPage() {
@@ -68,7 +73,10 @@ export default function AdminVouchersPage() {
       discount_value: String(v.discount_value),
       max_uses: String(v.max_uses ?? ''),
       min_order_amount: String(v.min_order_amount),
-      expiry_date: v.expiry_date ? v.expiry_date.split('T')[0] : '',
+      starts_at: v.starts_at ? new Date(v.starts_at).toISOString().slice(0, 16) : '',
+      expiry_date: v.expiry_date ? new Date(v.expiry_date).toISOString().slice(0, 16) : '',
+      auto_start: Boolean(v.starts_at),
+      auto_end: Boolean(v.expiry_date),
       is_active: v.is_active,
     });
     setShowForm(true);
@@ -76,6 +84,8 @@ export default function AdminVouchersPage() {
 
   const save = async () => {
     if (!form.code || !form.discount_value) { toast({ description: 'Code and discount value required', variant: 'destructive' }); return; }
+    if (form.auto_start && !form.starts_at) { toast({ description: 'Start date/time is required when auto start is enabled', variant: 'destructive' }); return; }
+    if (form.auto_end && !form.expiry_date) { toast({ description: 'End date/time is required when auto end is enabled', variant: 'destructive' }); return; }
     setIsSaving(true);
     const payload = {
       code: form.code.trim().toUpperCase(),
@@ -84,7 +94,8 @@ export default function AdminVouchersPage() {
       discount_value: parseFloat(form.discount_value),
       max_uses: form.max_uses ? parseInt(form.max_uses) : null,
       min_order_amount: parseFloat(form.min_order_amount) || 0,
-      expiry_date: form.expiry_date ? new Date(form.expiry_date).toISOString() : null,
+      starts_at: form.auto_start && form.starts_at ? new Date(form.starts_at).toISOString() : null,
+      expiry_date: form.auto_end && form.expiry_date ? new Date(form.expiry_date).toISOString() : null,
       is_active: editVoucher?.revoked ? false : form.is_active,
       revoked: editVoucher?.revoked ?? false,
       revoked_at: editVoucher?.revoked_at ?? null,
@@ -98,7 +109,7 @@ export default function AdminVouchersPage() {
         voucher_uid: payload.internal_voucher_uid,
         action: 'updated',
         reason: 'Edited in admin panel',
-        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value },
+        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date },
       });
       toast({ description: 'Voucher updated!' });
     } else {
@@ -110,7 +121,7 @@ export default function AdminVouchersPage() {
           voucher_uid: (data as unknown as Voucher).internal_voucher_uid ?? payload.internal_voucher_uid,
           action: 'created',
           reason: 'Created in admin panel',
-          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value },
+          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date },
         });
       }
       toast({ description: 'Voucher created!' });
@@ -215,7 +226,10 @@ export default function AdminVouchersPage() {
                 <p className="text-[11px] text-muted-foreground font-mono break-all">
                   UID: {v.internal_voucher_uid ?? 'N/A'}
                 </p>
-                {v.expiry_date && <p className="text-[11px] text-muted-foreground">Expires: {new Date(v.expiry_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
+                <p className="text-[11px] text-muted-foreground">
+                  {v.starts_at ? `Starts: ${new Date(v.starts_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Starts immediately'}
+                  {v.expiry_date ? ` · Ends: ${new Date(v.expiry_date).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ' · No end date'}
+                </p>
               </div>
               <div className="flex items-center gap-1.5">
                 <Switch checked={v.is_active} onCheckedChange={() => toggleActive(v)} className="scale-75" disabled={Boolean(v.revoked)} />
@@ -244,6 +258,28 @@ export default function AdminVouchersPage() {
               <Input value={form.internal_voucher_uid} readOnly className="mt-1 h-8 text-sm font-mono bg-muted" />
             </div>
             <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <Switch checked={form.auto_start} onCheckedChange={v => setForm(p => ({ ...p, auto_start: v }))} />
+                <Label className="text-xs">Auto Start</Label>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <Switch checked={form.auto_end} onCheckedChange={v => setForm(p => ({ ...p, auto_end: v }))} />
+                <Label className="text-xs">Auto End</Label>
+              </div>
+            </div>
+            {form.auto_start && (
+              <div>
+                <Label className="text-xs">Start At</Label>
+                <Input type="datetime-local" value={form.starts_at} onChange={e => setForm(p => ({ ...p, starts_at: e.target.value }))} className="mt-1 h-8 text-sm" />
+              </div>
+            )}
+            {form.auto_end && (
+              <div>
+                <Label className="text-xs">End At</Label>
+                <Input type="datetime-local" value={form.expiry_date} onChange={e => setForm(p => ({ ...p, expiry_date: e.target.value }))} className="mt-1 h-8 text-sm" />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">Type</Label>
                 <Select value={form.discount_type} onValueChange={v => setForm(p => ({ ...p, discount_type: v }))}>
@@ -268,10 +304,6 @@ export default function AdminVouchersPage() {
                 <Label className="text-xs">Min Order (₱)</Label>
                 <Input type="number" value={form.min_order_amount} onChange={e => setForm(p => ({ ...p, min_order_amount: e.target.value }))} placeholder="0" className="mt-1 h-8 text-sm" />
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Expiry Date</Label>
-              <Input type="date" value={form.expiry_date} onChange={e => setForm(p => ({ ...p, expiry_date: e.target.value }))} className="mt-1 h-8 text-sm" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} />

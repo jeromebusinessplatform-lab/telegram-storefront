@@ -3604,6 +3604,7 @@ export type Database = {
           max_uses: number | null
           min_order_amount: number | null
           internal_voucher_uid: string | null
+          starts_at: string | null
           referrer_customer_code: string | null
           revoked: boolean | null
           revoked_at: string | null
@@ -3622,6 +3623,7 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           internal_voucher_uid?: string | null
+          starts_at?: string | null
           referrer_customer_code?: string | null
           revoked?: boolean | null
           revoked_at?: string | null
@@ -3640,6 +3642,7 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           internal_voucher_uid?: string | null
+          starts_at?: string | null
           referrer_customer_code?: string | null
           revoked?: boolean | null
           revoked_at?: string | null

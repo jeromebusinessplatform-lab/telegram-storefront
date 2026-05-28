@@ -51,6 +51,11 @@ export default function CartPage() {
       setIsApplying(false);
       return;
     }
+    if (v.starts_at && new Date(v.starts_at) > new Date()) {
+      setVoucherError('This voucher is not active yet');
+      setIsApplying(false);
+      return;
+    }
     if (v.expiry_date && new Date(v.expiry_date) < new Date()) {
       setVoucherError('This voucher has expired');
       setIsApplying(false);

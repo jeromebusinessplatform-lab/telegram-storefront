@@ -200,6 +200,7 @@ export interface Voucher {
   max_uses?: number;
   used_count: number;
   min_order_amount: number;
+  starts_at?: string | null;
   expiry_date?: string;
   is_active: boolean;
   is_referral: boolean;
