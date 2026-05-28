@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Condensed:wght@600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -113,9 +113,20 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Nunito', 'Noto Sans', sans-serif;
+    font-family: 'Roboto', sans-serif;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Roboto Condensed', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0;
   }
 }
 
@@ -175,6 +186,13 @@ html, body, #root {
 }
 .badge-pulse {
   animation: pulse-badge 2s ease-in-out infinite;
+}
+
+/* Shared section typography */
+.section-font {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /* Rich text announcement content */

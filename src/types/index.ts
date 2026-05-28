@@ -51,6 +51,10 @@ declare global {
 export interface SavedAddress {
   id: string;
   label: string;
+  house_number?: string;
+  building_name?: string;
+  room_number?: string;
+  apartment_number?: string;
   address: string;
   city: string;
   province?: string;
@@ -149,6 +153,9 @@ export interface DeliveryConfig {
   pricing_profile?: 'standard' | 'tier_2' | 'tier_3';
   instructions?: string;
   fee?: number;
+  platform_fee?: number;
+  traffic_surcharge_mode?: 'flat' | 'percent' | 'per_km';
+  traffic_surcharge_value?: number;
   logo_url?: string;
 }
 
@@ -211,6 +218,10 @@ export type OrderStatus =
 export interface ShippingAddress {
   name: string;
   phone: string;
+  house_number: string;
+  building_name: string;
+  room_number: string;
+  apartment_number: string;
   address: string;
   city: string;
   province: string;

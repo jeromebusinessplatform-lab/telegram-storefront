@@ -10,6 +10,7 @@ import { CreditCard, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddressSection from '@/components/common/AddressSection';
 import { generateOrderNumber } from '@/lib/order-number';
+import { formatShippingAddress } from '@/lib/address';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
 
@@ -32,11 +33,16 @@ export default function CheckoutPage() {
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
   const [trafficActive, setTrafficActive] = useState(false);
+  const [deliveryBreakdown, setDeliveryBreakdown] = useState<Record<string, number> | null>(null);
   const [isCalculatingFee, setIsCalculatingFee] = useState(false);
 
   const [address, setAddress] = useState<ShippingAddress>({
     name: customer ? `${customer.telegram_first_name ?? ''} ${customer.telegram_last_name ?? ''}`.trim() : '',
     phone: customer?.phone ?? '',
+    house_number: '',
+    building_name: '',
+    room_number: '',
+    apartment_number: '',
     address: customer?.address ?? '',
     city: '',
     province: '',
@@ -74,6 +80,7 @@ export default function CheckoutPage() {
     if (!isDynamic(selectedDelivery.type)) {
       setDeliveryFee(selectedDelivery.config?.fee ?? 0);
       setDeliveryDistance(null);
+      setDeliveryBreakdown(null);
       return;
     }
     // Auto-calculate if coords are available
@@ -92,7 +99,7 @@ export default function CheckoutPage() {
         body: {
           dest_lat: lat,
           dest_lng: lng,
-          destination_address: `${address.address}, ${address.city}`,
+          destination_address: formatShippingAddress({ ...address, house_number: address.house_number, building_name: address.building_name, room_number: address.room_number, apartment_number: address.apartment_number }),
           delivery_provider_id: selectedDelivery?.id,
         },
       });
@@ -100,6 +107,7 @@ export default function CheckoutPage() {
         setDeliveryFee(data.fee);
         setDeliveryDistance(data.distance_km ?? null);
         setTrafficActive(data.traffic_active ?? false);
+        setDeliveryBreakdown(data.breakdown ?? null);
       }
     } catch { /* use fallback */ }
     setIsCalculatingFee(false);
@@ -111,7 +119,7 @@ export default function CheckoutPage() {
     try {
       const { data } = await supabase.functions.invoke('lalamove-quote', {
         body: {
-          destination_address: `${address.address}, ${address.city}${address.province ? ', ' + address.province : ''}`,
+          destination_address: formatShippingAddress({ ...address, house_number: address.house_number, building_name: address.building_name, room_number: address.room_number, apartment_number: address.apartment_number }),
           delivery_provider_id: selectedDelivery?.id,
         },
       });
@@ -119,6 +127,7 @@ export default function CheckoutPage() {
         setDeliveryFee(data.fee);
         setDeliveryDistance(data.distance_km ?? null);
         setTrafficActive(data.traffic_active ?? false);
+        setDeliveryBreakdown(data.breakdown ?? null);
       }
     } catch { /* use fallback */ }
     setIsCalculatingFee(false);
@@ -262,6 +271,7 @@ export default function CheckoutPage() {
                     if (!isDynamic(dp.type)) {
                       setDeliveryFee(dp.config?.fee ?? 0);
                       setDeliveryDistance(null);
+                      setDeliveryBreakdown(null);
                     } else if (addressCoords) {
                       calculateFee(addressCoords.lat, addressCoords.lng);
                     } else if (address.address && address.city) {
@@ -295,7 +305,7 @@ export default function CheckoutPage() {
             <div className="mt-2 flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 rounded-lg px-3 py-2">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
               <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
-                Rush hour surcharge applied — +₱2.00/km beyond 5 km threshold
+                Traffic adjustment applied based on the selected delivery provider settings
               </p>
             </div>
           )}
@@ -338,10 +348,44 @@ export default function CheckoutPage() {
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground flex items-center gap-1">
               Delivery{deliveryDistance != null ? ` (${deliveryDistance}km)` : ''}
-              {trafficActive && <span className="text-amber-600 font-bold">[Rush Hr]</span>}
+              {trafficActive && <span className="text-amber-600 font-bold">[Traffic]</span>}
             </span>
             <span className="font-semibold">{isCalculatingFee ? '...' : `₱${deliveryFee.toFixed(2)}`}</span>
           </div>
+          {deliveryBreakdown && (
+            <div className="space-y-1 pt-1">
+              {typeof deliveryBreakdown.base === 'number' && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Base fare</span>
+                  <span>₱{deliveryBreakdown.base.toFixed(2)}</span>
+                </div>
+              )}
+              {typeof deliveryBreakdown.first_fee === 'number' && deliveryBreakdown.first_fee > 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Distance charge</span>
+                  <span>₱{deliveryBreakdown.first_fee.toFixed(2)}</span>
+                </div>
+              )}
+              {typeof deliveryBreakdown.extra_fee === 'number' && deliveryBreakdown.extra_fee > 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Extra distance</span>
+                  <span>₱{deliveryBreakdown.extra_fee.toFixed(2)}</span>
+                </div>
+              )}
+              {typeof deliveryBreakdown.traffic_fee === 'number' && deliveryBreakdown.traffic_fee > 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Traffic surcharge</span>
+                  <span>₱{deliveryBreakdown.traffic_fee.toFixed(2)}</span>
+                </div>
+              )}
+              {typeof deliveryBreakdown.platform_fee === 'number' && deliveryBreakdown.platform_fee > 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Platform fee</span>
+                  <span>₱{deliveryBreakdown.platform_fee.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
           {voucherDiscount > 0 && (
             <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher ({appliedVoucher?.code})</span><span className="font-semibold text-green-600">-₱{voucherDiscount.toFixed(2)}</span></div>
           )}

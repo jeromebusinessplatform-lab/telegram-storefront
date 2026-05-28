@@ -11,6 +11,7 @@ import { MapPin, Bookmark, ChevronDown, Check, Navigation } from 'lucide-react';
 import { Customer, SavedAddress, ShippingAddress, CheckoutFieldsConfig } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { extractStreetLine } from '@/lib/address';
 
 // Fix Leaflet default icons in Vite
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -26,6 +27,7 @@ interface NominatimResult {
   lat: string;
   lon: string;
   address?: {
+    house_number?: string;
     road?: string;
     suburb?: string;
     city?: string;
@@ -34,6 +36,12 @@ interface NominatimResult {
     postcode?: string;
     county?: string;
     state?: string;
+    building?: string;
+    office?: string;
+    amenity?: string;
+    unit?: string;
+    flat?: string;
+    room?: string;
   };
 }
 
@@ -114,20 +122,45 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lon);
     const a = s.address ?? {};
-    const road = a.road ?? '';
-    const suburb = a.suburb ?? '';
-    const streetLine = [road, suburb].filter(Boolean).join(', ') || s.display_name.split(',')[0];
+    const streetLine = extractStreetLine(a as Record<string, unknown>, s.display_name.split(',')[0] ?? s.display_name);
     const city = a.city ?? a.municipality ?? a.county ?? '';
     const province = a.province ?? a.state ?? '';
     const zip = a.postcode ?? '';
+    const houseNumber = a.house_number ?? '';
+    const buildingName = a.building ?? a.office ?? a.amenity ?? '';
+    const roomNumber = a.room ?? a.unit ?? '';
+    const apartmentNumber = a.flat ?? a.unit ?? '';
 
-    onChange({ ...address, address: streetLine, city, province, zip });
+    onChange({
+      ...address,
+      address: streetLine,
+      house_number: houseNumber,
+      building_name: buildingName,
+      room_number: roomNumber,
+      apartment_number: apartmentNumber,
+      city,
+      province,
+      zip,
+    });
     onCoordsChange({ lat, lng });
     setSuggestions([]);
     setShowSuggestions(false);
 
     // Offer to save
-    setPendingSave({ address: { ...address, address: streetLine, city, province, zip }, coords: { lat, lng } });
+    setPendingSave({
+      address: {
+        ...address,
+        address: streetLine,
+        house_number: houseNumber,
+        building_name: buildingName,
+        room_number: roomNumber,
+        apartment_number: apartmentNumber,
+        city,
+        province,
+        zip,
+      },
+      coords: { lat, lng },
+    });
     setShowSavePrompt(true);
   };
 
@@ -146,14 +179,26 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
       );
       const data = await res.json();
       const a = data.address ?? {};
-      const road = a.road ?? a.suburb ?? '';
-      const suburb = a.suburb ?? '';
-      const streetLine = [road, suburb].filter((x, i, arr) => x && arr.indexOf(x) === i).join(', ') || (data.display_name?.split(',')[0] ?? '');
+      const streetLine = extractStreetLine(a as Record<string, unknown>, data.display_name?.split(',')[0] ?? data.display_name ?? '');
       const city = a.city ?? a.municipality ?? a.county ?? '';
       const province = a.province ?? a.state ?? '';
       const zip = a.postcode ?? '';
+      const houseNumber = a.house_number ?? '';
+      const buildingName = a.building ?? a.office ?? a.amenity ?? '';
+      const roomNumber = a.room ?? a.unit ?? '';
+      const apartmentNumber = a.flat ?? a.unit ?? '';
 
-      const newAddr = { ...address, address: streetLine, city, province, zip };
+      const newAddr = {
+        ...address,
+        address: streetLine,
+        house_number: houseNumber,
+        building_name: buildingName,
+        room_number: roomNumber,
+        apartment_number: apartmentNumber,
+        city,
+        province,
+        zip,
+      };
       onChange(newAddr);
       onCoordsChange({ lat, lng });
       setShowMap(false);
@@ -174,6 +219,10 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
     const newSaved: SavedAddress = {
       id: crypto.randomUUID(),
       label,
+      house_number: pendingSave.address.house_number,
+      building_name: pendingSave.address.building_name,
+      room_number: pendingSave.address.room_number,
+      apartment_number: pendingSave.address.apartment_number,
       address: pendingSave.address.address,
       city: pendingSave.address.city,
       province: pendingSave.address.province,
@@ -191,7 +240,17 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
   };
 
   const loadSavedAddress = (s: SavedAddress) => {
-    onChange({ ...address, address: s.address, city: s.city, province: s.province ?? '', zip: s.zip ?? '' });
+    onChange({
+      ...address,
+      address: s.address,
+      house_number: s.house_number ?? '',
+      building_name: s.building_name ?? '',
+      room_number: s.room_number ?? '',
+      apartment_number: s.apartment_number ?? '',
+      city: s.city,
+      province: s.province ?? '',
+      zip: s.zip ?? '',
+    });
     if (s.lat && s.lng) onCoordsChange({ lat: s.lat, lng: s.lng });
     setShowSaved(false);
   };
@@ -221,6 +280,16 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-foreground">{s.label}</p>
                     <p className="text-[11px] text-muted-foreground line-clamp-1">{s.address}, {s.city}</p>
+                    {(s.house_number || s.building_name || s.room_number || s.apartment_number) && (
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        {[
+                          s.house_number,
+                          s.building_name,
+                          s.room_number ? `Room ${s.room_number}` : '',
+                          s.apartment_number ? `Apt ${s.apartment_number}` : '',
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -293,6 +362,26 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
           )}
         </div>
       )}
+
+      {/* Additional Address Details */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[11px]">House No.</Label>
+          <Input value={address.house_number} onChange={e => onChange({ ...address, house_number: e.target.value })} placeholder="34" className="h-8 text-xs mt-0.5" />
+        </div>
+        <div>
+          <Label className="text-[11px]">Building Name</Label>
+          <Input value={address.building_name} onChange={e => onChange({ ...address, building_name: e.target.value })} placeholder="Building / Landmark" className="h-8 text-xs mt-0.5" />
+        </div>
+        <div>
+          <Label className="text-[11px]">Room No.</Label>
+          <Input value={address.room_number} onChange={e => onChange({ ...address, room_number: e.target.value })} placeholder="1208" className="h-8 text-xs mt-0.5" />
+        </div>
+        <div>
+          <Label className="text-[11px]">Apartment No.</Label>
+          <Input value={address.apartment_number} onChange={e => onChange({ ...address, apartment_number: e.target.value })} placeholder="A-12" className="h-8 text-xs mt-0.5" />
+        </div>
+      </div>
 
       {/* City + Province */}
       {(!cfg || cfg.show_city) && (
@@ -372,6 +461,16 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">{pendingSave?.address.address}, {pendingSave?.address.city}</p>
+            {(pendingSave?.address.house_number || pendingSave?.address.building_name || pendingSave?.address.room_number || pendingSave?.address.apartment_number) && (
+              <p className="text-[11px] text-muted-foreground">
+                {[
+                  pendingSave?.address.house_number,
+                  pendingSave?.address.building_name,
+                  pendingSave?.address.room_number ? `Room ${pendingSave?.address.room_number}` : '',
+                  pendingSave?.address.apartment_number ? `Apt ${pendingSave?.address.apartment_number}` : '',
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
             <div>
               <Label className="text-xs">Label (e.g. Home, Office)</Label>
               <Input

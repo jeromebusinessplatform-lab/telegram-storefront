@@ -14,7 +14,18 @@ import { Plus, Pencil, Trash2, Truck, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
-const EMPTY = { name: '', type: 'dynamic', pricing_profile: 'standard', fee: '0', instructions: '', logo_url: '', is_active: true };
+const EMPTY = {
+  name: '',
+  type: 'dynamic',
+  pricing_profile: 'standard',
+  fee: '0',
+  platform_fee: '0',
+  traffic_surcharge_mode: 'flat',
+  traffic_surcharge_value: '0',
+  instructions: '',
+  logo_url: '',
+  is_active: true,
+};
 
 const DYNAMIC_PROFILES = [
   {
@@ -56,6 +67,9 @@ export default function AdminDeliveryPage() {
       type: p.type === 'lalamove' ? 'dynamic' : p.type,
       pricing_profile: p.config?.pricing_profile ?? 'standard',
       fee: String(p.config?.fee ?? 0),
+      platform_fee: String(p.config?.platform_fee ?? 0),
+      traffic_surcharge_mode: p.config?.traffic_surcharge_mode ?? 'flat',
+      traffic_surcharge_value: String(p.config?.traffic_surcharge_value ?? 0),
       instructions: p.config?.instructions ?? '',
       logo_url: p.logo_url ?? p.config?.logo_url ?? '',
       is_active: p.is_active,
@@ -72,6 +86,9 @@ export default function AdminDeliveryPage() {
       config: {
         pricing_profile: form.type === 'dynamic' ? form.pricing_profile : undefined,
         fee: parseFloat(form.fee) || 0,
+        platform_fee: form.type === 'dynamic' ? (parseFloat(form.platform_fee) || 0) : undefined,
+        traffic_surcharge_mode: form.type === 'dynamic' ? form.traffic_surcharge_mode : undefined,
+        traffic_surcharge_value: form.type === 'dynamic' ? (parseFloat(form.traffic_surcharge_value) || 0) : undefined,
         instructions: form.instructions,
       },
       logo_url: form.logo_url || null,
@@ -108,7 +125,7 @@ export default function AdminDeliveryPage() {
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <MapPin className="w-3 h-3 text-primary" />
-          Dynamic fee: ₱60 base + ₱8 (first 4.5 km) + ₱6.50/km beyond 5 km
+          Dynamic fee: route distance + traffic adjustment + platform fee
         </p>
         <Button size="sm" onClick={() => { setEditProvider(null); setForm(EMPTY); setShowForm(true); }} className="btn-gradient gap-1.5">
           <Plus className="w-3.5 h-3.5" /> Add
@@ -180,6 +197,35 @@ export default function AdminDeliveryPage() {
                   <p className="text-[10px] text-muted-foreground">
                     {DYNAMIC_PROFILES.find(profile => profile.value === form.pricing_profile)?.description}
                   </p>
+                  <div>
+                    <Label className="text-xs">Platform Fee (₱)</Label>
+                    <Input
+                      type="number"
+                      value={form.platform_fee}
+                      onChange={e => setForm(p => ({ ...p, platform_fee: e.target.value }))}
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Traffic Surcharge Mode</Label>
+                    <Select value={form.traffic_surcharge_mode} onValueChange={v => setForm(p => ({ ...p, traffic_surcharge_mode: v }))}>
+                      <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flat">Flat fee</SelectItem>
+                        <SelectItem value="percent">Percent of delivery fee</SelectItem>
+                        <SelectItem value="per_km">Per kilometer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Traffic Surcharge Value</Label>
+                    <Input
+                      type="number"
+                      value={form.traffic_surcharge_value}
+                      onChange={e => setForm(p => ({ ...p, traffic_surcharge_value: e.target.value }))}
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
                 </div>
               )}
             </div>

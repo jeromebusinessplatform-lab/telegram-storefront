@@ -11,6 +11,9 @@ type DeliveryProviderRow = {
   config: {
     pricing_profile?: "standard" | "tier_2" | "tier_3";
     fee?: number;
+    platform_fee?: number;
+    traffic_surcharge_mode?: "flat" | "percent" | "per_km";
+    traffic_surcharge_value?: number;
     instructions?: string;
     logo_url?: string;
   } | null;
@@ -62,14 +65,17 @@ function getFeeProfile(profileKey?: string | null): FeeProfile {
 /**
  * Fee formula for the dynamic delivery profiles:
  * - Base fare        : profile-dependent
+ * - Route distance    : computed from pickup/drop-off points
  * - First 4.9 km     : ₱8.00 / km
- * - 4.9 km – 5 km   : no extra charge (bridge zone)
- * - Beyond 5 km      : profile-dependent / km (+ ₱2.00 traffic surcharge during peak hours)
+ * - Beyond 5 km      : profile-dependent / km
+ * - Traffic surcharge : optional, admin-controlled
+ * - Platform fee      : optional, admin-controlled
  */
 function calcDeliveryFee(
   distanceKm: number,
   trafficActive: boolean,
-  profileKey?: string | null
+  profileKey?: string | null,
+  config?: DeliveryProviderRow["config"]
 ): { fee: number; breakdown: Record<string, number>; traffic_active: boolean } {
   const profile = getFeeProfile(profileKey);
   const BASE = profile.baseFare;
@@ -77,17 +83,27 @@ function calcDeliveryFee(
   const RATE_FIRST = profile.firstKmRate; // ₱8 / km for first 4.9 km
   const THRESHOLD_KM = 5.0;
   const RATE_EXTRA = profile.extraRate;
-  const TRAFFIC_ADD = 2.0;
+  const PLATFORM_FEE = Math.max(0, config?.platform_fee ?? 0);
+  const TRAFFIC_MODE = config?.traffic_surcharge_mode ?? "flat";
+  const TRAFFIC_VALUE = Math.max(0, config?.traffic_surcharge_value ?? 0);
 
   const firstKm = Math.min(distanceKm, FIRST_CAP_KM);
   const firstFee = firstKm * RATE_FIRST;
 
   const extraKm = Math.max(0, distanceKm - THRESHOLD_KM);
-  const extraRate = trafficActive && extraKm > 0 ? RATE_EXTRA + TRAFFIC_ADD : RATE_EXTRA;
+  const trafficFee =
+    trafficActive
+      ? TRAFFIC_MODE === "percent"
+        ? ((BASE + firstFee + extraKm * RATE_EXTRA) * TRAFFIC_VALUE) / 100
+        : TRAFFIC_MODE === "per_km"
+          ? distanceKm * TRAFFIC_VALUE
+          : TRAFFIC_VALUE
+      : 0;
+  const extraRate = RATE_EXTRA;
   const extraFee = extraKm * extraRate;
 
-  const effectiveTraffic = trafficActive && extraKm > 0;
-  const fee = Math.round((BASE + firstFee + extraFee) * 100) / 100;
+  const effectiveTraffic = trafficActive && trafficFee > 0;
+  const fee = Math.round((BASE + firstFee + extraFee + trafficFee + PLATFORM_FEE) * 100) / 100;
 
   return {
     fee,
@@ -99,9 +115,33 @@ function calcDeliveryFee(
       extra_km: parseFloat(extraKm.toFixed(2)),
       extra_rate: extraRate,
       extra_fee: parseFloat(extraFee.toFixed(2)),
-      traffic_surcharge_per_km: effectiveTraffic ? TRAFFIC_ADD : 0,
+      traffic_fee: parseFloat(trafficFee.toFixed(2)),
+      traffic_surcharge_value: trafficActive ? TRAFFIC_VALUE : 0,
+      platform_fee: parseFloat(PLATFORM_FEE.toFixed(2)),
     },
   };
+}
+
+async function routeDistanceKm(
+  pickupLat: number,
+  pickupLng: number,
+  destLat: number,
+  destLng: number
+): Promise<number> {
+  try {
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${pickupLng},${pickupLat};${destLng},${destLat}?overview=false`
+    );
+    const data = await res.json();
+    const distance = data?.routes?.[0]?.distance;
+    if (typeof distance === "number" && distance > 0) {
+      return distance / 1000;
+    }
+  } catch (e) {
+    console.error("Routing error:", e);
+  }
+
+  return haversineKm(pickupLat, pickupLng, destLat, destLng) * 1.18;
 }
 
 async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
@@ -127,6 +167,7 @@ Deno.serve(async (req) => {
   }
 
   let providerProfile: string | null | undefined = undefined;
+  let providerConfig: DeliveryProviderRow["config"] = undefined;
 
   try {
     const body = await req.json();
@@ -161,6 +202,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       const provider = providerRow as DeliveryProviderRow | null;
       providerProfile = provider?.config?.pricing_profile;
+      providerConfig = provider?.config ?? undefined;
     }
 
     // Resolve destination coordinates
@@ -171,7 +213,7 @@ Deno.serve(async (req) => {
       if (!coords) {
         // Fallback: base fee only
         const trafficNow = isTrafficHours();
-        const { fee, breakdown, traffic_active } = calcDeliveryFee(0, trafficNow, providerProfile);
+        const { fee, breakdown, traffic_active } = calcDeliveryFee(0, trafficNow, providerProfile, providerConfig);
         return new Response(
           JSON.stringify({ fee, distance_km: null, traffic_active, breakdown, message: "Could not geocode — base fee applied" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -181,9 +223,9 @@ Deno.serve(async (req) => {
       destLng = coords.lng;
     }
 
-    const distanceKm = haversineKm(pickupLat, pickupLng, destLat, destLng);
+    const distanceKm = await routeDistanceKm(pickupLat, pickupLng, destLat, destLng);
     const trafficNow = isTrafficHours();
-    const { fee, breakdown, traffic_active } = calcDeliveryFee(distanceKm, trafficNow, providerProfile);
+    const { fee, breakdown, traffic_active } = calcDeliveryFee(distanceKm, trafficNow, providerProfile, providerConfig);
 
     console.log(`Distance: ${distanceKm.toFixed(2)} km | Traffic: ${trafficNow} | Fee: ₱${fee}`);
 
@@ -199,7 +241,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("delivery-fee error:", error);
-    const { fee } = calcDeliveryFee(0, false, providerProfile);
+    const { fee } = calcDeliveryFee(0, false, providerProfile, providerConfig);
     return new Response(
       JSON.stringify({ fee, message: "Error calculating fee" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

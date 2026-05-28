@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Check, X, FileText, AlertTriangle, Image as ImageIcon, Download } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { formatShippingAddress } from '@/lib/address';
 
 const STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -287,7 +288,10 @@ export default function AdminOrderDetailPage() {
               <>
                 <div className="flex justify-between"><span className="text-muted-foreground">Recipient</span><span>{shippingAddr.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Contact</span><span>{shippingAddr.phone}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="text-right">{shippingAddr.address}, {shippingAddr.city}</span></div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Address</span>
+                  <span className="text-right">{formatShippingAddress(shippingAddr)}</span>
+                </div>
               </>
             )}
             {paymentMethod && <div className="flex justify-between"><span className="text-muted-foreground">Payment</span><span>{paymentMethod.name}</span></div>}

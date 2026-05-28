@@ -58,7 +58,7 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
           <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center">
             <span className="text-white text-xs font-black">PC</span>
           </div>
-          <span className="font-black text-base text-foreground tracking-tight">{title ?? storeName}</span>
+          <span className="section-font text-base text-foreground">{title ?? storeName}</span>
         </div>
       )}
 

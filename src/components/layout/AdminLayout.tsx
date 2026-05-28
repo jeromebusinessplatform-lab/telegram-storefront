@@ -39,12 +39,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-black">PC</span>
-        </div>
-        <div>
-          <div className="font-black text-sm text-foreground">PRIME CORE</div>
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-black">PC</span>
+          </div>
+          <div>
+          <div className="section-font text-sm text-foreground">PRIME CORE</div>
           <div className="text-[10px] text-muted-foreground font-medium">Admin Panel</div>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="font-black text-lg text-foreground">{title}</h1>
+          <h1 className="section-font text-lg text-foreground">{title}</h1>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => navigate('/')}
