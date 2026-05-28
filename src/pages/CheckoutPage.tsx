@@ -239,7 +239,14 @@ export default function CheckoutPage() {
         toast({ description: 'This voucher has reached its usage limit', variant: 'destructive' });
         return;
       }
-      const eligibility = await validateVoucherRules(voucher, customer.id);
+      const eligibility = await validateVoucherRules(
+        voucher,
+        customer.id,
+        items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+      );
       if (!eligibility.ok) {
         toast({ description: eligibility.message, variant: 'destructive' });
         return;

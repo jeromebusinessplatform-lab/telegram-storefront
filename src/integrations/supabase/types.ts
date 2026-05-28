@@ -3608,6 +3608,8 @@ export type Database = {
           starts_at: string | null
           allow_returning_customers: boolean | null
           max_users: number | null
+          required_product_id: string | null
+          required_product_quantity: number | null
           referrer_customer_code: string | null
           revoked: boolean | null
           revoked_at: string | null
@@ -3630,6 +3632,8 @@ export type Database = {
           starts_at?: string | null
           allow_returning_customers?: boolean | null
           max_users?: number | null
+          required_product_id?: string | null
+          required_product_quantity?: number | null
           referrer_customer_code?: string | null
           revoked?: boolean | null
           revoked_at?: string | null
@@ -3652,6 +3656,8 @@ export type Database = {
           starts_at?: string | null
           allow_returning_customers?: boolean | null
           max_users?: number | null
+          required_product_id?: string | null
+          required_product_quantity?: number | null
           referrer_customer_code?: string | null
           revoked?: boolean | null
           revoked_at?: string | null

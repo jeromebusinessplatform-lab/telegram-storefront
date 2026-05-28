@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
-import { Voucher } from '@/types';
+import { Product, Voucher } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,6 +27,8 @@ type VoucherForm = {
   single_use: boolean;
   allow_returning_customers: boolean;
   max_users: string;
+  required_product_id: string;
+  required_product_quantity: string;
   is_active: boolean;
 };
 
@@ -44,6 +46,8 @@ const EMPTY: VoucherForm = {
   single_use: false,
   allow_returning_customers: true,
   max_users: '',
+  required_product_id: '',
+  required_product_quantity: '1',
   is_active: true,
 };
 
@@ -56,6 +60,7 @@ function generateCode() {
 export default function AdminVouchersPage() {
   const { toast } = useToast();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -64,8 +69,12 @@ export default function AdminVouchersPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from('vouchers').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-      setVouchers((data as unknown as Voucher[]) ?? []);
+    Promise.all([
+      supabase.from('vouchers').select('*').order('created_at', { ascending: false }),
+      supabase.from('products').select('id, name, sub_name').eq('is_active', true).order('sort_order'),
+    ]).then(([vouchersResult, productsResult]) => {
+      setVouchers((vouchersResult.data as unknown as Voucher[]) ?? []);
+      setProducts((productsResult.data as unknown as Product[]) ?? []);
     });
   }, []);
 
@@ -94,6 +103,8 @@ export default function AdminVouchersPage() {
       max_uses: String(v.max_uses ?? ''),
       min_order_amount: String(v.min_order_amount),
       max_users: String(v.max_users ?? ''),
+      required_product_id: (v as Voucher & { required_product_id?: string | null }).required_product_id ?? '',
+      required_product_quantity: String((v as Voucher & { required_product_quantity?: number | null }).required_product_quantity ?? 1),
       starts_at: v.starts_at ? new Date(v.starts_at).toISOString().slice(0, 16) : '',
       expiry_date: v.expiry_date ? new Date(v.expiry_date).toISOString().slice(0, 16) : '',
       auto_start: Boolean(v.starts_at),
@@ -110,6 +121,7 @@ export default function AdminVouchersPage() {
     if (form.auto_start && !form.starts_at) { toast({ description: 'Start date/time is required when auto start is enabled', variant: 'destructive' }); return; }
     if (form.auto_end && !form.expiry_date) { toast({ description: 'End date/time is required when auto end is enabled', variant: 'destructive' }); return; }
     if (form.max_users && Number(form.max_users) < 1) { toast({ description: 'Number of users must be at least 1', variant: 'destructive' }); return; }
+    if (form.required_product_id && Number(form.required_product_quantity) < 1) { toast({ description: 'Required product quantity must be at least 1', variant: 'destructive' }); return; }
     setIsSaving(true);
       const payload = {
       code: form.code.trim().toUpperCase(),
@@ -119,6 +131,8 @@ export default function AdminVouchersPage() {
       max_uses: form.max_uses ? parseInt(form.max_uses) : null,
       min_order_amount: parseFloat(form.min_order_amount) || 0,
       max_users: form.max_users ? parseInt(form.max_users) : null,
+      required_product_id: form.required_product_id || null,
+      required_product_quantity: form.required_product_id ? parseInt(form.required_product_quantity) || 1 : null,
       single_use: Boolean(form.single_use),
       allow_returning_customers: Boolean(form.allow_returning_customers),
       starts_at: form.auto_start && form.starts_at ? new Date(form.starts_at).toISOString() : null,
@@ -136,7 +150,7 @@ export default function AdminVouchersPage() {
         voucher_uid: payload.internal_voucher_uid,
         action: 'updated',
         reason: 'Edited in admin panel',
-        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
+        metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, required_product_id: payload.required_product_id, required_product_quantity: payload.required_product_quantity, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
       });
       toast({ description: 'Voucher updated!' });
     } else {
@@ -148,7 +162,7 @@ export default function AdminVouchersPage() {
           voucher_uid: (data as unknown as Voucher).internal_voucher_uid ?? payload.internal_voucher_uid,
           action: 'created',
           reason: 'Created in admin panel',
-          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
+          metadata: { code: payload.code, discount_type: payload.discount_type, discount_value: payload.discount_value, starts_at: payload.starts_at, expiry_date: payload.expiry_date, max_users: payload.max_users, required_product_id: payload.required_product_id, required_product_quantity: payload.required_product_quantity, single_use: payload.single_use, allow_returning_customers: payload.allow_returning_customers },
         });
       }
       toast({ description: 'Voucher created!' });
@@ -256,6 +270,13 @@ export default function AdminVouchersPage() {
                   {' · '}
                   {v.allow_returning_customers === false ? 'New customers only' : 'Returning customers allowed'}
                 </p>
+                {(v as Voucher & { required_product_id?: string | null; required_product_quantity?: number | null }).required_product_id && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Requires product purchase: {
+                      products.find(p => p.id === (v as Voucher & { required_product_id?: string | null }).required_product_id)?.name ?? 'Selected product'
+                    } x{(v as Voucher & { required_product_quantity?: number | null }).required_product_quantity ?? 1}
+                  </p>
+                )}
                 <p className="text-[11px] text-muted-foreground font-mono break-all">
                   UID: {v.internal_voucher_uid ?? 'N/A'}
                 </p>
@@ -343,14 +364,34 @@ export default function AdminVouchersPage() {
                 <Label className="text-xs">Max Uses</Label>
                 <Input type="number" value={form.max_uses} onChange={e => setForm(p => ({ ...p, max_uses: e.target.value }))} placeholder="Unlimited" className="mt-1 h-8 text-sm" />
               </div>
-              <div>
-                <Label className="text-xs">Min Order (₱)</Label>
+            <div>
+                <Label className="text-xs">Minimum Purchase Required (₱)</Label>
                 <Input type="number" value={form.min_order_amount} onChange={e => setForm(p => ({ ...p, min_order_amount: e.target.value }))} placeholder="0" className="mt-1 h-8 text-sm" />
               </div>
             </div>
             <div>
               <Label className="text-xs">Number of Users</Label>
               <Input type="number" value={form.max_users} onChange={e => setForm(p => ({ ...p, max_users: e.target.value }))} placeholder="Unlimited" className="mt-1 h-8 text-sm" min="1" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Product Purchase Required</Label>
+                <Select value={form.required_product_id || 'none'} onValueChange={v => setForm(p => ({ ...p, required_product_id: v === 'none' ? '' : v }))}>
+                  <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="No product required" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No product required</SelectItem>
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}{product.sub_name ? ` · ${product.sub_name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Required Qty</Label>
+                <Input type="number" value={form.required_product_quantity} onChange={e => setForm(p => ({ ...p, required_product_quantity: e.target.value }))} className="mt-1 h-8 text-sm" min="1" placeholder="1" disabled={!form.required_product_id} />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} />

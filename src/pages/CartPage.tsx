@@ -75,7 +75,14 @@ export default function CartPage() {
       return;
     }
     if (customer?.id) {
-      const check = await validateVoucherRules(v, customer.id);
+      const check = await validateVoucherRules(
+        v,
+        customer.id,
+        items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+      );
       if (!check.ok) {
         setVoucherError(check.message);
         setIsApplying(false);

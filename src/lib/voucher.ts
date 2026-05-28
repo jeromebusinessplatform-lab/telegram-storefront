@@ -1,11 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Voucher } from '@/types';
 
-export async function validateVoucherRules(voucher: Voucher, customerId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+type VoucherCartItem = {
+  product_id: string;
+  quantity: number;
+};
+
+export async function validateVoucherRules(voucher: Voucher, customerId: string, items: VoucherCartItem[] = []): Promise<{ ok: true } | { ok: false; message: string }> {
   const { data, error } = await supabase.functions.invoke('voucher-eligibility', {
     body: {
       voucher_id: voucher.id,
       customer_id: customerId,
+      items,
     },
   });
 

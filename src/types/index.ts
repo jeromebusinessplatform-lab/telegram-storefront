@@ -203,6 +203,8 @@ export interface Voucher {
   single_use?: boolean;
   allow_returning_customers?: boolean;
   max_users?: number | null;
+  required_product_id?: string | null;
+  required_product_quantity?: number | null;
   starts_at?: string | null;
   expiry_date?: string;
   is_active: boolean;

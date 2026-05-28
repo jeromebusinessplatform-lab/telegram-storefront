@@ -8,6 +8,10 @@ const corsHeaders = {
 type VoucherEligibilityPayload = {
   voucher_id?: string;
   customer_id?: string;
+  items?: Array<{
+    product_id?: string;
+    quantity?: number;
+  }>;
 };
 
 Deno.serve(async (req) => {
@@ -19,6 +23,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as VoucherEligibilityPayload;
     const voucherId = body.voucher_id?.trim();
     const customerId = body.customer_id?.trim();
+    const items = Array.isArray(body.items) ? body.items : [];
 
     if (!voucherId || !customerId) {
       return new Response(JSON.stringify({ ok: false, message: "Missing voucher or customer" }), {
@@ -43,7 +48,7 @@ Deno.serve(async (req) => {
 
     const { data: voucher, error: voucherError } = await supabase
       .from("vouchers")
-      .select("id, single_use, allow_returning_customers, max_users")
+      .select("id, single_use, allow_returning_customers, max_users, required_product_id, required_product_quantity")
       .eq("id", voucherId)
       .maybeSingle();
 
@@ -82,6 +87,11 @@ Deno.serve(async (req) => {
       .filter(order => !restoredOrderIds.has(order.id));
     const customerAlreadyUsed = activeVoucherOrders.some(order => order.customer_id === customerId);
     const distinctCustomerCount = new Set(activeVoucherOrders.map(order => order.customer_id)).size;
+    const requiredProductId = (voucher as { required_product_id?: string | null }).required_product_id ?? null;
+    const requiredProductQuantity = (voucher as { required_product_quantity?: number | null }).required_product_quantity ?? 1;
+    const requiredProductMatch = requiredProductId
+      ? items.find(item => item.product_id === requiredProductId)
+      : null;
 
     if (voucher.allow_returning_customers === false && (customerOrderCount ?? 0) > 0) {
       return new Response(JSON.stringify({ ok: false, message: "This voucher is for first-time customers only" }), {
@@ -102,6 +112,15 @@ Deno.serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (requiredProductId) {
+      if (!requiredProductMatch || (requiredProductMatch.quantity ?? 0) < requiredProductQuantity) {
+        return new Response(JSON.stringify({ ok: false, message: "This voucher requires a specific product purchase" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ ok: true }), {
