@@ -311,6 +311,33 @@ export default function CheckoutPage() {
     <AppLayout showBack title="Checkout">
       <div className="px-3 py-3 space-y-3">
 
+        {/* STEP 1: Customer Details */}
+        <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground">Step 1 | Customer Details</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-3 text-center">
+              <p className="text-[11px] text-muted-foreground">Telegram Username</p>
+              <p className="text-sm font-black text-primary">
+                {customer?.telegram_username ? `@${customer.telegram_username}` : 'N/A'}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2.5">
+              <p className="text-[11px] text-muted-foreground">Telegram ID</p>
+              <p className="text-xs font-bold text-foreground text-left break-all">{customer?.telegram_id ?? 'N/A'}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2.5 text-right">
+              <p className="text-[11px] text-muted-foreground">Customer ID</p>
+              <p className="text-xs font-bold text-foreground break-all">{customer?.customer_code ?? 'N/A'}</p>
+            </div>
+            <div className="col-span-2 rounded-lg border border-border bg-background px-3 py-2.5">
+              <p className="text-[11px] text-muted-foreground">Internal Customer ID</p>
+              <p className="text-xs font-bold text-foreground break-all">{customer?.id ?? 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Delivery Address */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
           <div className="flex items-center gap-2 mb-3">
