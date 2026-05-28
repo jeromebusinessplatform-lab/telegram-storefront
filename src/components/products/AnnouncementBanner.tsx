@@ -1,0 +1,61 @@
+import { AnnouncementConfig } from '@/types';
+import { renderRichTextMarkdown } from '@/lib/rich-text';
+import { Megaphone } from 'lucide-react';
+
+interface AnnouncementBannerProps {
+  announcement: AnnouncementConfig;
+}
+
+export default function AnnouncementBanner({ announcement }: AnnouncementBannerProps) {
+  const shouldShowImage = Boolean(announcement.banner_image_url) && announcement.display_mode !== 'text';
+  const shouldShowText = Boolean(announcement.title.trim() || announcement.body_markdown.trim()) && announcement.display_mode !== 'image';
+
+  if (!shouldShowImage && !shouldShowText) return null;
+
+  return (
+    <div className="px-3 pt-3">
+      <div className="overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-brand-sm">
+        {shouldShowImage && (
+          <div className="relative">
+            <img
+              src={announcement.banner_image_url}
+              alt={announcement.banner_alt || announcement.title || 'Announcement banner'}
+              className="h-40 w-full object-cover sm:h-48"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+            {announcement.title && (
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">
+                  <Megaphone className="h-3.5 w-3.5" />
+                  Announcement
+                </div>
+                <h2 className="mt-1 text-lg font-black leading-tight">{announcement.title}</h2>
+              </div>
+            )}
+          </div>
+        )}
+
+        {shouldShowText && (
+          <div className="p-4">
+            {!shouldShowImage && (
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+                <Megaphone className="h-3.5 w-3.5" />
+                Announcement
+              </div>
+            )}
+            {announcement.title && !shouldShowImage && (
+              <h2 className="mt-1 text-base font-black leading-tight text-foreground">{announcement.title}</h2>
+            )}
+            {announcement.body_markdown && (
+              <div
+                className="announcement-copy"
+                dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(announcement.body_markdown) }}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

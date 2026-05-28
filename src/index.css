@@ -176,3 +176,65 @@ html, body, #root {
 .badge-pulse {
   animation: pulse-badge 2s ease-in-out infinite;
 }
+
+/* Rich text announcement content */
+.announcement-copy {
+  color: hsl(var(--foreground));
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+.announcement-copy h1,
+.announcement-copy h2,
+.announcement-copy h3 {
+  margin: 0.35rem 0 0.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.announcement-copy h1 {
+  font-size: 1.15rem;
+}
+
+.announcement-copy h2 {
+  font-size: 1.02rem;
+}
+
+.announcement-copy h3 {
+  font-size: 0.95rem;
+}
+
+.announcement-copy p {
+  margin: 0.25rem 0;
+}
+
+.announcement-copy ul {
+  margin: 0.35rem 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.announcement-copy li {
+  margin: 0.15rem 0;
+}
+
+.announcement-copy a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.announcement-copy strong {
+  font-weight: 800;
+}
+
+.announcement-copy em {
+  font-style: italic;
+}
+
+.announcement-copy code {
+  padding: 0.12rem 0.28rem;
+  border-radius: 0.35rem;
+  background: hsl(var(--muted));
+  font-size: 0.85em;
+}

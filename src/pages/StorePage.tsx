@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import ProductGrid from '@/components/products/ProductGrid';
+import AnnouncementBanner from '@/components/products/AnnouncementBanner';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, Category } from '@/types';
+import { Product, Category, AnnouncementConfig } from '@/types';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +12,7 @@ export default function StorePage() {
   const { customer } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [announcement, setAnnouncement] = useState<AnnouncementConfig | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +23,16 @@ export default function StorePage() {
       setCategories(data as Category[] ?? []);
     };
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchAnnouncement = async () => {
+      const { data } = await supabase.from('app_settings').select('value').eq('key', 'announcement_config').maybeSingle();
+      if (data?.value) {
+        setAnnouncement(data.value as AnnouncementConfig);
+      }
+    };
+    fetchAnnouncement();
   }, []);
 
   useEffect(() => {
@@ -50,6 +62,8 @@ export default function StorePage() {
   return (
     <AppLayout>
       <div className="pb-2">
+        {announcement?.enabled && <AnnouncementBanner announcement={announcement} />}
+
         {/* Welcome banner */}
         {customer && (
           <div className="px-3 pt-3 pb-0">

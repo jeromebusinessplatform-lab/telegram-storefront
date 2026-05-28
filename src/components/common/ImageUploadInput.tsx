@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,11 @@ export default function ImageUploadInput({ value, onChange, label = 'Image' }: I
   const [urlInput, setUrlInput] = useState(value || '');
   const [preview, setPreview] = useState(value || '');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setUrlInput(value || '');
+    setPreview(value || '');
+  }, [value]);
 
   const handleUrlChange = (v: string) => {
     setUrlInput(v);

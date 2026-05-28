@@ -3,12 +3,15 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { CheckoutFieldsConfig, ReceiptFieldsConfig, BotConfig, StoreInfo, ReferralConfig } from '@/types';
-import { Save, Store, FileText, Bot, Gift, Shield } from 'lucide-react';
+import { CheckoutFieldsConfig, ReceiptFieldsConfig, BotConfig, StoreInfo, ReferralConfig, AnnouncementConfig } from '@/types';
+import { Save, Store, FileText, Bot, Gift, Shield, Megaphone } from 'lucide-react';
+import ImageUploadInput from '@/components/common/ImageUploadInput';
+import { renderRichTextMarkdown } from '@/lib/rich-text';
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
@@ -18,6 +21,7 @@ export default function AdminSettingsPage() {
   const [receiptCfg, setReceiptCfg] = useState<ReceiptFieldsConfig>({ show_order_number: true, show_customer_name: true, show_customer_code: true, show_items: true, show_fees: true, show_delivery_fee: true, show_voucher: true, show_total: true, show_payment_method: true, show_date: true, show_store_name: true });
   const [botCfg, setBotCfg] = useState<BotConfig>({ support_bot_username: '@PrimeCoreSupportBot', bot_token: '', notifications_enabled: false, support_relay_enabled: false });
   const [referralCfg, setReferralCfg] = useState<ReferralConfig>({ enabled: true, referrer_reward_type: 'fixed', referrer_reward_value: 50, referee_reward_type: 'fixed', referee_reward_value: 30 });
+  const [announcementCfg, setAnnouncementCfg] = useState<AnnouncementConfig>({ enabled: false, display_mode: 'both', title: '', body_markdown: '', banner_image_url: '', banner_alt: 'Store announcement' });
   const [adminCode, setAdminCode] = useState('PRIME2026ADMIN');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -31,6 +35,7 @@ export default function AdminSettingsPage() {
         if (row.key === 'receipt_fields_config') setReceiptCfg(row.value as ReceiptFieldsConfig);
         if (row.key === 'bot_config') setBotCfg(row.value as BotConfig);
         if (row.key === 'referral_config') setReferralCfg(row.value as ReferralConfig);
+        if (row.key === 'announcement_config') setAnnouncementCfg(row.value as AnnouncementConfig);
         if (row.key === 'admin_access_code') setAdminCode((row.value as {code: string}).code);
       });
     };
@@ -38,7 +43,7 @@ export default function AdminSettingsPage() {
   }, []);
 
   const saveSetting = async (key: string, value: unknown) => {
-    await supabase.from('app_settings').update({ value }).eq('key', key);
+    await supabase.from('app_settings').upsert({ key, value }, { onConflict: 'key' });
   };
 
   const saveAll = async () => {
@@ -49,6 +54,7 @@ export default function AdminSettingsPage() {
       saveSetting('receipt_fields_config', receiptCfg),
       saveSetting('bot_config', botCfg),
       saveSetting('referral_config', referralCfg),
+      saveSetting('announcement_config', announcementCfg),
       saveSetting('admin_access_code', { code: adminCode }),
     ]);
     toast({ description: 'Settings saved!' });
@@ -71,6 +77,7 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="receipt" className="text-xs gap-1.5"><FileText className="w-3 h-3" />Receipt</TabsTrigger>
           <TabsTrigger value="bot" className="text-xs gap-1.5"><Bot className="w-3 h-3" />Bot</TabsTrigger>
           <TabsTrigger value="referral" className="text-xs gap-1.5"><Gift className="w-3 h-3" />Referral</TabsTrigger>
+          <TabsTrigger value="announcement" className="text-xs gap-1.5"><Megaphone className="w-3 h-3" />Announcement</TabsTrigger>
           <TabsTrigger value="security" className="text-xs gap-1.5"><Shield className="w-3 h-3" />Security</TabsTrigger>
         </TabsList>
 
@@ -151,6 +158,92 @@ export default function AdminSettingsPage() {
                 </select>
               </div>
               <div><Label className="text-xs">Reward Value</Label><Input type="number" value={referralCfg.referee_reward_value} onChange={e => setReferralCfg(p => ({ ...p, referee_reward_value: parseFloat(e.target.value) || 0 }))} className="mt-1 h-8 text-sm" /></div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="announcement">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-brand-sm space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold">Announcement Panel</h3>
+                <p className="text-[11px] text-muted-foreground">Publish an image banner, a rich text announcement, or both on the Products page.</p>
+              </div>
+              <Switch checked={announcementCfg.enabled} onCheckedChange={v => setAnnouncementCfg(p => ({ ...p, enabled: v }))} />
+            </div>
+
+            <div>
+              <Label className="text-xs">Display Mode</Label>
+              <select
+                value={announcementCfg.display_mode}
+                onChange={e => setAnnouncementCfg(p => ({ ...p, display_mode: e.target.value as AnnouncementConfig['display_mode'] }))}
+                className="mt-1 h-8 text-sm w-full border border-border rounded-md px-2 bg-background"
+              >
+                <option value="both">Image + Text</option>
+                <option value="image">Image Only</option>
+                <option value="text">Text Only</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input
+                value={announcementCfg.title}
+                onChange={e => setAnnouncementCfg(p => ({ ...p, title: e.target.value }))}
+                placeholder="Weekend Sale"
+                className="mt-1 h-8 text-sm"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Announcement Body</Label>
+              <Textarea
+                value={announcementCfg.body_markdown}
+                onChange={e => setAnnouncementCfg(p => ({ ...p, body_markdown: e.target.value }))}
+                placeholder={"Use markdown for rich text.\n\nExample:\n**Bold text**\n*Italic text*\n- Bullet 1\n- Bullet 2\n[Link text](https://example.com)"}
+                className="mt-1 text-sm h-32 resize-none"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Supports bold, italic, bullet lists, headings, code, and links.</p>
+            </div>
+
+            <ImageUploadInput
+              value={announcementCfg.banner_image_url}
+              onChange={url => setAnnouncementCfg(p => ({ ...p, banner_image_url: url }))}
+              label="Banner Image"
+            />
+
+            <div>
+              <Label className="text-xs">Banner Alt Text</Label>
+              <Input
+                value={announcementCfg.banner_alt}
+                onChange={e => setAnnouncementCfg(p => ({ ...p, banner_alt: e.target.value }))}
+                placeholder="Announcement banner"
+                className="mt-1 h-8 text-sm"
+              />
+            </div>
+
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Preview</div>
+              <div className="space-y-2">
+                {announcementCfg.banner_image_url && announcementCfg.display_mode !== 'text' && (
+                  <img
+                    src={announcementCfg.banner_image_url}
+                    alt={announcementCfg.banner_alt || announcementCfg.title || 'Announcement preview'}
+                    className="w-full h-36 object-cover rounded-lg border border-border"
+                  />
+                )}
+                {(announcementCfg.title || announcementCfg.body_markdown) && announcementCfg.display_mode !== 'image' && (
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    {announcementCfg.title && <h4 className="text-sm font-black">{announcementCfg.title}</h4>}
+                    {announcementCfg.body_markdown && (
+                      <div
+                        className="announcement-copy mt-2"
+                        dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(announcementCfg.body_markdown) }}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>

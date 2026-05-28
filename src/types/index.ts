@@ -299,6 +299,15 @@ export interface StoreInfo {
   currency_symbol: string;
 }
 
+export interface AnnouncementConfig {
+  enabled: boolean;
+  display_mode: 'text' | 'image' | 'both';
+  title: string;
+  body_markdown: string;
+  banner_image_url: string;
+  banner_alt: string;
+}
+
 export interface CheckoutFieldsConfig {
   show_phone: boolean;
   show_email: boolean;
