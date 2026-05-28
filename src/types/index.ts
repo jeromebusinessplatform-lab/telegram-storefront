@@ -52,13 +52,15 @@ export interface SavedAddress {
   id: string;
   label: string;
   house_number?: string;
-  building_name?: string;
-  room_number?: string;
-  apartment_number?: string;
-  address: string;
-  city: string;
+  street_name?: string;
+  street_type?: string;
+  subdivision_village?: string;
+  barangay_town?: string;
+  city_municipality?: string;
   province?: string;
   zip?: string;
+  address: string;
+  city: string;
   lat?: number;
   lng?: number;
 }
@@ -219,13 +221,15 @@ export interface ShippingAddress {
   name: string;
   phone: string;
   house_number: string;
-  building_name: string;
-  room_number: string;
-  apartment_number: string;
-  address: string;
-  city: string;
+  street_name: string;
+  street_type: string;
+  subdivision_village: string;
+  barangay_town: string;
+  city_municipality: string;
   province: string;
   zip: string;
+  address: string;
+  city: string;
 }
 
 export interface OrderItem {

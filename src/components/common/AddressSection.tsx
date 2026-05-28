@@ -8,10 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MapPin, Bookmark, ChevronDown, Check, Navigation } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Customer, SavedAddress, ShippingAddress, CheckoutFieldsConfig } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { extractStreetLine } from '@/lib/address';
+import { STREET_TYPES, formatShippingAddress, inferStreetType, stripStreetType } from '@/lib/address';
 
 // Fix Leaflet default icons in Vite
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -30,6 +30,9 @@ interface NominatimResult {
     house_number?: string;
     road?: string;
     suburb?: string;
+    neighbourhood?: string;
+    village?: string;
+    town?: string;
     city?: string;
     municipality?: string;
     province?: string;
@@ -42,6 +45,7 @@ interface NominatimResult {
     unit?: string;
     flat?: string;
     room?: string;
+    village_green?: string;
   };
 }
 
@@ -54,6 +58,8 @@ interface AddressSectionProps {
   checkoutConfig: CheckoutFieldsConfig | null;
   notes: string;
   onNotesChange: (notes: string) => void;
+  saveForFuture: boolean;
+  onSaveForFutureChange: (value: boolean) => void;
 }
 
 // Internal component: captures map clicks
@@ -64,8 +70,18 @@ function PinMarker({ position, setPosition }: { position: [number, number]; setP
   return <Marker position={position} draggable eventHandlers={{ dragend: (e) => { const m = e.target; setPosition([m.getLatLng().lat, m.getLatLng().lng]); } }} />;
 }
 
-export default function AddressSection({ address, onChange, coords, onCoordsChange, customer, checkoutConfig, notes, onNotesChange }: AddressSectionProps) {
-  const { toast } = useToast();
+export default function AddressSection({
+  address,
+  onChange,
+  coords,
+  onCoordsChange,
+  customer,
+  checkoutConfig,
+  notes,
+  onNotesChange,
+  saveForFuture,
+  onSaveForFutureChange,
+}: AddressSectionProps) {
   const cfg = checkoutConfig;
 
   // Saved addresses
@@ -77,16 +93,12 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Map picker
   const [showMap, setShowMap] = useState(false);
   const [mapPin, setMapPin] = useState<[number, number]>([14.7103888, 121.0544856]);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
-
-  // Save prompt
-  const [showSavePrompt, setShowSavePrompt] = useState(false);
-  const [saveLabel, setSaveLabel] = useState('');
-  const [pendingSave, setPendingSave] = useState<{ address: ShippingAddress; coords: { lat: number; lng: number } } | null>(null);
 
   useEffect(() => {
     if (customer?.saved_addresses) {
@@ -114,54 +126,65 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
   }, []);
 
   const handleAddressInput = (val: string) => {
-    onChange({ ...address, address: val });
+    setSearchQuery(val);
     searchAddress(val);
+  };
+
+  const buildAddress = (next: Partial<ShippingAddress>): ShippingAddress => {
+    const merged = {
+      ...address,
+      ...next,
+    };
+    const street = [merged.street_name, merged.street_type].filter(Boolean).join(' ').trim();
+    const full = formatShippingAddress({
+      ...merged,
+      address: street,
+      city: merged.city_municipality || merged.city,
+    });
+    return {
+      ...merged,
+      city: merged.city_municipality || merged.city,
+      address: full,
+    } as ShippingAddress;
+  };
+
+  const parseGeoAddress = (a: NominatimResult['address'], displayName: string) => {
+    const roadRaw = a?.road ?? '';
+    const houseNumber = a?.house_number ?? '';
+    const streetType = a?.road ? inferStreetType(roadRaw) : '';
+    const streetName = roadRaw
+      ? (stripStreetType(roadRaw) || roadRaw)
+          .replace(new RegExp(`^${houseNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+`, 'i'), '')
+          .trim()
+      : '';
+    const barangayTown = a?.suburb ?? a?.neighbourhood ?? a?.village ?? a?.town ?? a?.city ?? a?.municipality ?? a?.county ?? '';
+    const cityMunicipality = a?.city ?? a?.municipality ?? a?.town ?? a?.county ?? barangayTown ?? '';
+    const province = a?.province ?? a?.state ?? '';
+    const zip = a?.postcode ?? '';
+    const subdivisionVillage = a?.building ?? a?.office ?? a?.amenity ?? '';
+    return {
+      house_number: houseNumber,
+      street_name: streetName,
+      street_type: streetType,
+      subdivision_village: subdivisionVillage,
+      barangay_town: barangayTown,
+      city_municipality: cityMunicipality,
+      province,
+      zip,
+      address: displayName.split(',')[0] ?? displayName,
+    };
   };
 
   const selectSuggestion = (s: NominatimResult) => {
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lon);
-    const a = s.address ?? {};
-    const streetLine = extractStreetLine(a as Record<string, unknown>, s.display_name.split(',')[0] ?? s.display_name);
-    const city = a.city ?? a.municipality ?? a.county ?? '';
-    const province = a.province ?? a.state ?? '';
-    const zip = a.postcode ?? '';
-    const houseNumber = a.house_number ?? '';
-    const buildingName = a.building ?? a.office ?? a.amenity ?? '';
-    const roomNumber = a.room ?? a.unit ?? '';
-    const apartmentNumber = a.flat ?? a.unit ?? '';
-
-    onChange({
-      ...address,
-      address: streetLine,
-      house_number: houseNumber,
-      building_name: buildingName,
-      room_number: roomNumber,
-      apartment_number: apartmentNumber,
-      city,
-      province,
-      zip,
-    });
+    const parsed = parseGeoAddress(s.address, s.display_name);
+    const next = buildAddress(parsed);
+    onChange(next);
+    setSearchQuery(next.address);
     onCoordsChange({ lat, lng });
     setSuggestions([]);
     setShowSuggestions(false);
-
-    // Offer to save
-    setPendingSave({
-      address: {
-        ...address,
-        address: streetLine,
-        house_number: houseNumber,
-        building_name: buildingName,
-        room_number: roomNumber,
-        apartment_number: apartmentNumber,
-        city,
-        province,
-        zip,
-      },
-      coords: { lat, lng },
-    });
-    setShowSavePrompt(true);
   };
 
   const openMapPicker = () => {
@@ -178,34 +201,12 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
         { headers: { 'User-Agent': 'PRIME-CORE-App/1.0' } }
       );
       const data = await res.json();
-      const a = data.address ?? {};
-      const streetLine = extractStreetLine(a as Record<string, unknown>, data.display_name?.split(',')[0] ?? data.display_name ?? '');
-      const city = a.city ?? a.municipality ?? a.county ?? '';
-      const province = a.province ?? a.state ?? '';
-      const zip = a.postcode ?? '';
-      const houseNumber = a.house_number ?? '';
-      const buildingName = a.building ?? a.office ?? a.amenity ?? '';
-      const roomNumber = a.room ?? a.unit ?? '';
-      const apartmentNumber = a.flat ?? a.unit ?? '';
-
-      const newAddr = {
-        ...address,
-        address: streetLine,
-        house_number: houseNumber,
-        building_name: buildingName,
-        room_number: roomNumber,
-        apartment_number: apartmentNumber,
-        city,
-        province,
-        zip,
-      };
+      const parsed = parseGeoAddress(data.address ?? {}, data.display_name ?? '');
+      const newAddr = buildAddress(parsed);
       onChange(newAddr);
+      setSearchQuery(newAddr.address);
       onCoordsChange({ lat, lng });
       setShowMap(false);
-
-      // Offer to save
-      setPendingSave({ address: newAddr, coords: { lat, lng } });
-      setShowSavePrompt(true);
     } catch {
       onCoordsChange({ lat, lng });
       setShowMap(false);
@@ -213,47 +214,24 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
     setIsReverseGeocoding(false);
   };
 
-  const saveAddress = async () => {
-    if (!customer || !pendingSave) return;
-    const label = saveLabel.trim() || 'Address';
-    const newSaved: SavedAddress = {
-      id: crypto.randomUUID(),
-      label,
-      house_number: pendingSave.address.house_number,
-      building_name: pendingSave.address.building_name,
-      room_number: pendingSave.address.room_number,
-      apartment_number: pendingSave.address.apartment_number,
-      address: pendingSave.address.address,
-      city: pendingSave.address.city,
-      province: pendingSave.address.province,
-      zip: pendingSave.address.zip,
-      lat: pendingSave.coords.lat,
-      lng: pendingSave.coords.lng,
-    };
-    const updated = [...savedAddresses, newSaved];
-    await supabase.from('customers').update({ saved_addresses: updated }).eq('id', customer.id);
-    setSavedAddresses(updated);
-    toast({ description: `Address saved as "${label}"!` });
-    setShowSavePrompt(false);
-    setPendingSave(null);
-    setSaveLabel('');
-  };
-
   const loadSavedAddress = (s: SavedAddress) => {
-    onChange({
-      ...address,
-      address: s.address,
+    const next = buildAddress({
       house_number: s.house_number ?? '',
-      building_name: s.building_name ?? '',
-      room_number: s.room_number ?? '',
-      apartment_number: s.apartment_number ?? '',
-      city: s.city,
+      street_name: s.street_name ?? '',
+      street_type: s.street_type ?? '',
+      subdivision_village: s.subdivision_village ?? '',
+      barangay_town: s.barangay_town ?? '',
+      city_municipality: s.city_municipality ?? s.city ?? '',
       province: s.province ?? '',
       zip: s.zip ?? '',
     });
+    onChange(next);
+    setSearchQuery(next.address);
     if (s.lat && s.lng) onCoordsChange({ lat: s.lat, lng: s.lng });
     setShowSaved(false);
   };
+
+  const fullAddressPreview = formatShippingAddress(address);
 
   return (
     <div className="space-y-2.5">
@@ -280,13 +258,14 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-foreground">{s.label}</p>
                     <p className="text-[11px] text-muted-foreground line-clamp-1">{s.address}, {s.city}</p>
-                    {(s.house_number || s.building_name || s.room_number || s.apartment_number) && (
+                    {(s.house_number || s.street_name || s.street_type || s.subdivision_village || s.barangay_town) && (
                       <p className="text-[10px] text-muted-foreground line-clamp-1">
                         {[
                           s.house_number,
-                          s.building_name,
-                          s.room_number ? `Room ${s.room_number}` : '',
-                          s.apartment_number ? `Apt ${s.apartment_number}` : '',
+                          s.street_name,
+                          s.street_type,
+                          s.subdivision_village,
+                          s.barangay_town,
                         ].filter(Boolean).join(' · ')}
                       </p>
                     )}
@@ -312,14 +291,14 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
         )}
       </div>
 
-      {/* Street Address with autocomplete + Drop Pin */}
+      {/* Search + Drop Pin */}
       {(!cfg || cfg.show_address) && (
         <div className="relative">
-          <Label className="text-[11px]">Street Address *</Label>
+          <Label className="text-[11px]">Search Address *</Label>
           <div className="flex gap-1.5 mt-0.5">
             <div className="flex-1 relative">
               <Input
-                value={address.address}
+                value={searchQuery}
                 onChange={e => handleAddressInput(e.target.value)}
                 placeholder="Start typing your address..."
                 className="h-8 text-xs pr-7"
@@ -363,53 +342,68 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
         </div>
       )}
 
-      {/* Additional Address Details */}
+      {/* Structured Address Fields */}
       <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-[11px]">House No.</Label>
+        <div className="col-span-2">
+          <Label className="text-[11px]">House / Apartment / Unit / Door / Gate No. *</Label>
           <Input value={address.house_number} onChange={e => onChange({ ...address, house_number: e.target.value })} placeholder="34" className="h-8 text-xs mt-0.5" />
         </div>
         <div>
-          <Label className="text-[11px]">Building Name</Label>
-          <Input value={address.building_name} onChange={e => onChange({ ...address, building_name: e.target.value })} placeholder="Building / Landmark" className="h-8 text-xs mt-0.5" />
+          <Label className="text-[11px]">Street Name *</Label>
+          <Input value={address.street_name} onChange={e => onChange({ ...address, street_name: e.target.value })} placeholder="Lazaro" className="h-8 text-xs mt-0.5" />
         </div>
         <div>
-          <Label className="text-[11px]">Room No.</Label>
-          <Input value={address.room_number} onChange={e => onChange({ ...address, room_number: e.target.value })} placeholder="1208" className="h-8 text-xs mt-0.5" />
+          <Label className="text-[11px]">Street Type *</Label>
+          <Select value={address.street_type} onValueChange={value => onChange({ ...address, street_type: value })}>
+            <SelectTrigger className="mt-0.5 h-8 text-xs">
+              <SelectValue placeholder="Street" />
+            </SelectTrigger>
+            <SelectContent>
+              {STREET_TYPES.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-2">
+          <Label className="text-[11px]">SUBDIVISION / VILLAGE</Label>
+          <Input value={address.subdivision_village} onChange={e => onChange({ ...address, subdivision_village: e.target.value })} placeholder="Subdivision or Village" className="h-8 text-xs mt-0.5" />
         </div>
         <div>
-          <Label className="text-[11px]">Apartment No.</Label>
-          <Input value={address.apartment_number} onChange={e => onChange({ ...address, apartment_number: e.target.value })} placeholder="A-12" className="h-8 text-xs mt-0.5" />
+          <Label className="text-[11px]">Barangay / Town *</Label>
+          <Input value={address.barangay_town} onChange={e => onChange({ ...address, barangay_town: e.target.value })} placeholder="Dalandanan" className="h-8 text-xs mt-0.5" />
         </div>
-      </div>
-
-      {/* City + Province */}
-      {(!cfg || cfg.show_city) && (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[11px]">City *</Label>
-            <Input value={address.city} onChange={e => onChange({ ...address, city: e.target.value })} placeholder="City" className="h-8 text-xs mt-0.5" />
-          </div>
-          {(!cfg || cfg.show_province) && (
-            <div>
-              <Label className="text-[11px]">Province</Label>
-              <Input value={address.province} onChange={e => onChange({ ...address, province: e.target.value })} placeholder="Province" className="h-8 text-xs mt-0.5" />
-            </div>
-          )}
+        <div>
+          <Label className="text-[11px]">City / Municipality *</Label>
+          <Input value={address.city_municipality} onChange={e => onChange({ ...address, city_municipality: e.target.value, city: e.target.value })} placeholder="Valenzuela City" className="h-8 text-xs mt-0.5" />
         </div>
-      )}
-
-      {(!cfg || cfg.show_zip) && (
+        <div>
+          <Label className="text-[11px]">Province</Label>
+          <Input value={address.province} onChange={e => onChange({ ...address, province: e.target.value })} placeholder="Metro Manila" className="h-8 text-xs mt-0.5" />
+        </div>
         <div>
           <Label className="text-[11px]">ZIP Code</Label>
           <Input value={address.zip} onChange={e => onChange({ ...address, zip: e.target.value })} placeholder="1234" className="h-8 text-xs mt-0.5" />
         </div>
-      )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold text-foreground">Full Address</p>
+            <p className="text-[11px] text-muted-foreground">{fullAddressPreview || 'Your full address will appear here.'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={saveForFuture} onCheckedChange={onSaveForFutureChange} />
+            <span className="text-[11px] font-semibold text-foreground">Save for future use</span>
+          </div>
+        </div>
+      </div>
 
       {(!cfg || cfg.show_notes) && (
         <div>
-          <Label className="text-[11px]">Order Notes</Label>
-          <Textarea value={notes} onChange={e => onNotesChange(e.target.value)} placeholder="Any special instructions..." className="text-xs mt-0.5 h-16 resize-none" />
+          <Label className="text-[11px]">Delivery Instructions</Label>
+          <Textarea value={notes} onChange={e => onNotesChange(e.target.value)} placeholder="Gate code, landmark, unit number, rider notes..." className="text-xs mt-0.5 h-16 resize-none" />
         </div>
       )}
 
@@ -450,45 +444,6 @@ export default function AddressSection({ address, onChange, coords, onCoordsChan
         </DialogContent>
       </Dialog>
 
-      {/* ── Save Address Prompt ── */}
-      <Dialog open={showSavePrompt} onOpenChange={v => { if (!v) { setShowSavePrompt(false); setPendingSave(null); setSaveLabel(''); } }}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="text-sm flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-primary" />
-              Save this address?
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">{pendingSave?.address.address}, {pendingSave?.address.city}</p>
-            {(pendingSave?.address.house_number || pendingSave?.address.building_name || pendingSave?.address.room_number || pendingSave?.address.apartment_number) && (
-              <p className="text-[11px] text-muted-foreground">
-                {[
-                  pendingSave?.address.house_number,
-                  pendingSave?.address.building_name,
-                  pendingSave?.address.room_number ? `Room ${pendingSave?.address.room_number}` : '',
-                  pendingSave?.address.apartment_number ? `Apt ${pendingSave?.address.apartment_number}` : '',
-                ].filter(Boolean).join(' · ')}
-              </p>
-            )}
-            <div>
-              <Label className="text-xs">Label (e.g. Home, Office)</Label>
-              <Input
-                value={saveLabel}
-                onChange={e => setSaveLabel(e.target.value)}
-                placeholder="Home"
-                className="mt-1 h-8 text-sm"
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && saveAddress()}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { setShowSavePrompt(false); setPendingSave(null); setSaveLabel(''); }} className="flex-1 text-sm">Skip</Button>
-              <Button onClick={saveAddress} className="flex-1 btn-gradient text-sm">Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { useCart } from '@/contexts/CartContext';
@@ -13,6 +13,13 @@ import { generateOrderNumber } from '@/lib/order-number';
 import { formatShippingAddress } from '@/lib/address';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
+
+type DeliveryQuote = {
+  fee: number;
+  distance_km: number | null;
+  traffic_active: boolean;
+  breakdown: Record<string, number> | null;
+};
 
 export default function CheckoutPage() {
   const { state } = useLocation();
@@ -35,14 +42,19 @@ export default function CheckoutPage() {
   const [trafficActive, setTrafficActive] = useState(false);
   const [deliveryBreakdown, setDeliveryBreakdown] = useState<Record<string, number> | null>(null);
   const [isCalculatingFee, setIsCalculatingFee] = useState(false);
+  const [providerQuotes, setProviderQuotes] = useState<Record<string, DeliveryQuote>>({});
+  const [saveForFuture, setSaveForFuture] = useState(false);
+  const quoteRunId = useRef(0);
 
   const [address, setAddress] = useState<ShippingAddress>({
     name: customer ? `${customer.telegram_first_name ?? ''} ${customer.telegram_last_name ?? ''}`.trim() : '',
     phone: customer?.phone ?? '',
     house_number: '',
-    building_name: '',
-    room_number: '',
-    apartment_number: '',
+    street_name: '',
+    street_type: '',
+    subdivision_village: '',
+    barangay_town: '',
+    city_municipality: '',
     address: customer?.address ?? '',
     city: '',
     province: '',
@@ -74,64 +86,109 @@ export default function CheckoutPage() {
     fetchData();
   }, []);
 
-  // Recalculate fee when delivery provider or address coords change
+  const quoteDeliveryProvider = async (provider: DeliveryProvider, destinationAddress: string, coords: { lat: number; lng: number } | null) => {
+    if (!isDynamic(provider.type)) {
+      return {
+        fee: provider.config?.fee ?? 0,
+        distance_km: null,
+        traffic_active: false,
+        breakdown: null,
+      } as DeliveryQuote;
+    }
+
+    const { data } = await supabase.functions.invoke('lalamove-quote', {
+      body: {
+        destination_address: destinationAddress,
+        ...(coords ? { dest_lat: coords.lat, dest_lng: coords.lng } : {}),
+        delivery_provider_id: provider.id,
+      },
+    });
+
+    return {
+      fee: Number(data?.fee ?? 0),
+      distance_km: data?.distance_km ?? null,
+      traffic_active: Boolean(data?.traffic_active),
+      breakdown: (data?.breakdown ?? null) as Record<string, number> | null,
+    } as DeliveryQuote;
+  };
+
+  const currentDestination = formatShippingAddress(address);
+
+  useEffect(() => {
+    let active = true;
+    const runId = ++quoteRunId.current;
+
+    const dynamicProviders = deliveryProviders.filter(provider => isDynamic(provider.type));
+    const shouldQuote = Boolean(currentDestination.trim()) || Boolean(addressCoords);
+
+    if (!shouldQuote || dynamicProviders.length === 0) {
+      setProviderQuotes(prev => {
+        const next = { ...prev };
+        for (const provider of dynamicProviders) delete next[provider.id];
+        return next;
+      });
+      if (selectedDelivery) {
+        if (!isDynamic(selectedDelivery.type)) {
+          setDeliveryFee(selectedDelivery.config?.fee ?? 0);
+        } else {
+          setDeliveryFee(0);
+        }
+        setDeliveryDistance(null);
+        setTrafficActive(false);
+        setDeliveryBreakdown(null);
+      }
+      return () => { active = false; };
+    }
+
+    setIsCalculatingFee(true);
+    const timer = setTimeout(async () => {
+      try {
+        const entries = await Promise.all(
+          dynamicProviders.map(async provider => {
+            try {
+              const quote = await quoteDeliveryProvider(provider, currentDestination, addressCoords);
+              return [provider.id, quote] as const;
+            } catch (error) {
+              console.error(`Quote failed for ${provider.id}:`, error);
+              return [provider.id, {
+                fee: 0,
+                distance_km: null,
+                traffic_active: false,
+                breakdown: null,
+              } as DeliveryQuote] as const;
+            }
+          })
+        );
+        if (!active || quoteRunId.current !== runId) return;
+        setProviderQuotes(Object.fromEntries(entries));
+      } finally {
+        if (active && quoteRunId.current === runId) {
+          setIsCalculatingFee(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [currentDestination, addressCoords, deliveryProviders, selectedDelivery]);
+
   useEffect(() => {
     if (!selectedDelivery) return;
     if (!isDynamic(selectedDelivery.type)) {
       setDeliveryFee(selectedDelivery.config?.fee ?? 0);
       setDeliveryDistance(null);
+      setTrafficActive(false);
       setDeliveryBreakdown(null);
       return;
     }
-    // Auto-calculate if coords are available
-    if (addressCoords) {
-      calculateFee(addressCoords.lat, addressCoords.lng);
-    } else if (address.address && address.city) {
-      calculateFeeByText();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDelivery, addressCoords]);
-
-  const calculateFee = async (lat: number, lng: number) => {
-    setIsCalculatingFee(true);
-    try {
-      const { data } = await supabase.functions.invoke('lalamove-quote', {
-        body: {
-          dest_lat: lat,
-          dest_lng: lng,
-          destination_address: formatShippingAddress({ ...address, house_number: address.house_number, building_name: address.building_name, room_number: address.room_number, apartment_number: address.apartment_number }),
-          delivery_provider_id: selectedDelivery?.id,
-        },
-      });
-      if (data?.fee) {
-        setDeliveryFee(data.fee);
-        setDeliveryDistance(data.distance_km ?? null);
-        setTrafficActive(data.traffic_active ?? false);
-        setDeliveryBreakdown(data.breakdown ?? null);
-      }
-    } catch { /* use fallback */ }
-    setIsCalculatingFee(false);
-  };
-
-  const calculateFeeByText = async () => {
-    if (!address.address || !address.city) return;
-    setIsCalculatingFee(true);
-    try {
-      const { data } = await supabase.functions.invoke('lalamove-quote', {
-        body: {
-          destination_address: formatShippingAddress({ ...address, house_number: address.house_number, building_name: address.building_name, room_number: address.room_number, apartment_number: address.apartment_number }),
-          delivery_provider_id: selectedDelivery?.id,
-        },
-      });
-      if (data?.fee) {
-        setDeliveryFee(data.fee);
-        setDeliveryDistance(data.distance_km ?? null);
-        setTrafficActive(data.traffic_active ?? false);
-        setDeliveryBreakdown(data.breakdown ?? null);
-      }
-    } catch { /* use fallback */ }
-    setIsCalculatingFee(false);
-  };
+    const quote = providerQuotes[selectedDelivery.id];
+    setDeliveryFee(quote?.fee ?? 0);
+    setDeliveryDistance(quote?.distance_km ?? null);
+    setTrafficActive(quote?.traffic_active ?? false);
+    setDeliveryBreakdown(quote?.breakdown ?? null);
+  }, [selectedDelivery, providerQuotes]);
 
   const handleCoordsChange = (c: { lat: number; lng: number } | null) => {
     setAddressCoords(c);
@@ -157,7 +214,7 @@ export default function CheckoutPage() {
     if (!customer) { toast({ description: 'Please login via Telegram first', variant: 'destructive' }); return; }
     if (!selectedPayment) { toast({ description: 'Please select a payment method', variant: 'destructive' }); return; }
     if (!selectedDelivery) { toast({ description: 'Please select a delivery option', variant: 'destructive' }); return; }
-    if (!address.name || !address.phone || !address.address || !address.city) {
+    if (!address.name || !address.phone || !address.street_name || !address.barangay_town || !address.city_municipality) {
       toast({ description: 'Please fill in your delivery details', variant: 'destructive' }); return;
     }
     if (isDynamic(selectedDelivery.type) && deliveryFee === 0) {
@@ -166,6 +223,11 @@ export default function CheckoutPage() {
 
     setIsPlacing(true);
     try {
+      const shippingAddress = {
+        ...address,
+        address: currentDestination,
+        city: address.city_municipality || address.city,
+      };
       const orderItems = items.map(i => ({
         product_id: i.product_id,
         name: i.product_name,
@@ -189,7 +251,7 @@ export default function CheckoutPage() {
         total,
         status: 'pending',
         payment_method_id: selectedPayment.id,
-        shipping_address: address,
+        shipping_address: shippingAddress,
         notes,
       }).select().maybeSingle();
 
@@ -197,6 +259,30 @@ export default function CheckoutPage() {
 
       if (appliedVoucher) {
         await supabase.from('vouchers').update({ used_count: appliedVoucher.used_count + 1 }).eq('id', appliedVoucher.id);
+      }
+
+      if (saveForFuture) {
+        const savedAddresses = customer.saved_addresses ?? [];
+        const nextSaved = [
+          ...savedAddresses,
+          {
+            id: crypto.randomUUID(),
+            label: address.street_name ? `${address.street_name} ${address.street_type}`.trim() : 'Checkout Address',
+            house_number: address.house_number,
+            street_name: address.street_name,
+            street_type: address.street_type,
+            subdivision_village: address.subdivision_village,
+            barangay_town: address.barangay_town,
+            city_municipality: address.city_municipality,
+            province: address.province,
+            zip: address.zip,
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            lat: addressCoords?.lat,
+            lng: addressCoords?.lng,
+          },
+        ];
+        await supabase.from('customers').update({ saved_addresses: nextSaved }).eq('id', customer.id);
       }
 
       if (selectedPayment.type === 'maya') {
@@ -243,6 +329,8 @@ export default function CheckoutPage() {
             checkoutConfig={checkoutConfig}
             notes={notes}
             onNotesChange={setNotes}
+            saveForFuture={saveForFuture}
+            onSaveForFutureChange={setSaveForFuture}
           />
         </div>
 
@@ -263,6 +351,8 @@ export default function CheckoutPage() {
             {deliveryProviders.map(dp => {
               const isSelected = selectedDelivery?.id === dp.id;
               const logo = (dp as unknown as { logo_url?: string }).logo_url ?? dp.config?.logo_url;
+              const quote = providerQuotes[dp.id];
+              const shownFee = isDynamic(dp.type) ? quote?.fee ?? null : (dp.config?.fee ?? 0);
               return (
                 <button
                   key={dp.id}
@@ -272,10 +362,19 @@ export default function CheckoutPage() {
                       setDeliveryFee(dp.config?.fee ?? 0);
                       setDeliveryDistance(null);
                       setDeliveryBreakdown(null);
-                    } else if (addressCoords) {
-                      calculateFee(addressCoords.lat, addressCoords.lng);
-                    } else if (address.address && address.city) {
-                      calculateFeeByText();
+                    } else {
+                      const quote = providerQuotes[dp.id];
+                      if (quote) {
+                        setDeliveryFee(quote.fee);
+                        setDeliveryDistance(quote.distance_km);
+                        setTrafficActive(quote.traffic_active);
+                        setDeliveryBreakdown(quote.breakdown);
+                      } else {
+                        setDeliveryFee(0);
+                        setDeliveryDistance(null);
+                        setTrafficActive(false);
+                        setDeliveryBreakdown(null);
+                      }
                     }
                   }}
                   className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all ${isSelected ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
@@ -288,13 +387,13 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <p className={`text-[10px] font-bold leading-tight text-center line-clamp-2 ${isSelected ? 'text-primary' : 'text-foreground'}`}>{dp.name}</p>
-                  {isSelected && deliveryFee > 0 && (
+                  {shownFee != null && (
                     <span className="text-[10px] font-bold text-primary">
-                      ₱{deliveryFee.toFixed(2)}
-                      {deliveryDistance != null && ` · ${deliveryDistance}km`}
+                      ₱{shownFee.toFixed(2)}
+                      {isSelected && deliveryDistance != null && ` · ${deliveryDistance}km`}
                     </span>
                   )}
-                  {isSelected && isDynamic(dp.type) && deliveryFee === 0 && !isCalculatingFee && (
+                  {isDynamic(dp.type) && shownFee == null && !isCalculatingFee && (
                     <span className="text-[10px] text-muted-foreground">Enter address</span>
                   )}
                 </button>

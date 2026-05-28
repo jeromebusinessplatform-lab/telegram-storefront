@@ -7,11 +7,11 @@ export function formatShippingAddress(address: ShippingAddress | Partial<Shippin
   if (!address) return '';
   return compact([
     address.house_number,
-    address.building_name,
-    address.room_number ? `Room ${address.room_number}` : undefined,
-    address.apartment_number ? `Apt ${address.apartment_number}` : undefined,
-    address.address,
-    address.city,
+    address.street_name,
+    address.street_type,
+    address.subdivision_village,
+    address.barangay_town,
+    address.city_municipality ?? address.city,
     address.province,
     address.zip,
   ]).join(', ');
@@ -27,4 +27,55 @@ export function extractStreetLine(address: Record<string, unknown>, fallback: st
   const line = compact([houseNumber, road, suburb]).join(', ');
   const named = compact([building, office, amenity]).join(', ');
   return line || named || fallback;
+}
+
+export const STREET_TYPES = [
+  'Street',
+  'Avenue',
+  'Road',
+  'Highway',
+  'Boulevard',
+  'Drive',
+  'Lane',
+  'Court',
+  'Way',
+  'Trail',
+  'Terrace',
+  'Place',
+  'Circle',
+  'Alley',
+  'Path',
+  'Extension',
+  'Expressway',
+] as const;
+
+export function inferStreetType(road: string): string {
+  const normalized = road.trim().toLowerCase();
+  const match = STREET_TYPES.find(type => normalized.endsWith(type.toLowerCase()));
+  return match ?? '';
+}
+
+export function stripStreetType(road: string): string {
+  const trimmed = road.trim();
+  const type = inferStreetType(trimmed);
+  if (!type) return trimmed;
+  return trimmed.slice(0, Math.max(0, trimmed.toLowerCase().lastIndexOf(type.toLowerCase()))).trim().replace(/[,.-]+$/, '').trim();
+}
+
+export function composeAddressParts(address: Partial<ShippingAddress>): ShippingAddress {
+  const full = formatShippingAddress(address as ShippingAddress);
+  return {
+    name: address.name ?? '',
+    phone: address.phone ?? '',
+    house_number: address.house_number ?? '',
+    street_name: address.street_name ?? '',
+    street_type: address.street_type ?? '',
+    subdivision_village: address.subdivision_village ?? '',
+    barangay_town: address.barangay_town ?? '',
+    city_municipality: address.city_municipality ?? address.city ?? '',
+    province: address.province ?? '',
+    zip: address.zip ?? '',
+    address: full,
+    city: address.city_municipality ?? address.city ?? '',
+  };
 }
