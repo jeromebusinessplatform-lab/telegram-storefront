@@ -239,6 +239,7 @@ export type DeliveryFeePaymentMode = 'pay_now' | 'upon_fulfillment';
 export interface OrderItem {
   product_id: string;
   name: string;
+  sub_name?: string;
   price: number;
   quantity: number;
   variant?: string;

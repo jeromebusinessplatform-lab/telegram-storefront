@@ -242,6 +242,7 @@ export default function AdminOrderDetailPage() {
                 <img src={item.image || '/placeholder.svg'} alt={item.name} className="w-10 h-10 rounded-lg object-cover bg-muted" onError={e=>{(e.target as HTMLImageElement).src='/placeholder.svg';}} />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold">{item.name}</p>
+                  {item.sub_name && <p className="text-[11px] text-muted-foreground">{item.sub_name}</p>}
                   {item.variant && <p className="text-[11px] text-muted-foreground">{item.variant}</p>}
                 </div>
                 <div className="text-right">

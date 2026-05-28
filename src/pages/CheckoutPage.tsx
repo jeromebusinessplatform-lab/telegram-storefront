@@ -233,7 +233,7 @@ export default function CheckoutPage() {
         sub_name: i.sub_name,
         price: i.price,
         quantity: i.quantity,
-        variant: i.sub_name ?? i.variant?.option,
+        variant: i.variant?.option,
         image: i.product_image,
       }));
 
@@ -506,11 +506,122 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* STEP 3: Payment Method */}
+        {/* STEP 3: Order Summary */}
+        <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-3">
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold text-foreground">Step 3 | Order Summary</h2>
+          </div>
+          <div className="space-y-2.5">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
+              <h3 className="text-xs font-bold text-foreground mb-2">Items Ordered</h3>
+              <div className="space-y-2">
+                {items.map(item => {
+                  const unitPrice = item.price + (item.variant?.price_modifier ?? 0);
+                  const lineTotal = unitPrice * item.quantity;
+                  return (
+                    <div key={`${item.product_id}__${item.variant?.option ?? ''}`} className="flex items-start gap-2.5">
+                      <img src={item.product_image || '/placeholder.svg'} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover bg-muted flex-shrink-0" onError={e => {(e.target as HTMLImageElement).src='/placeholder.svg';}} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground leading-tight line-clamp-1">{item.product_name}</p>
+                        {item.sub_name && (
+                          <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">{item.sub_name}</p>
+                        )}
+                        {item.variant?.option && (
+                          <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">{item.variant.option}</p>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-bold">x{item.quantity}</p>
+                        <p className="text-[11px] text-muted-foreground">₱{unitPrice.toFixed(2)} each</p>
+                        <p className="text-xs font-black text-primary">₱{lineTotal.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-3 space-y-1.5">
+              <h3 className="text-xs font-bold text-foreground mb-1">Pricing Breakdown</h3>
+              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal ({items.length} items)</span><span className="font-semibold">₱{subtotal.toFixed(2)}</span></div>
+              {fees.map((f, i) => (
+                <div key={i} className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{f.name}</span>
+                  <span className={`font-semibold ${f.category === 'discount' ? 'text-green-600' : ''}`}>
+                    {f.category === 'discount' ? '-' : '+'}₱{f.amount.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  Delivery{deliveryDistance != null ? ` (${deliveryDistance}km)` : ''}
+                  {trafficActive && <span className="text-amber-600 font-bold">[Traffic]</span>}
+                </span>
+                <span className="font-semibold">{isCalculatingFee ? '...' : deliveryFeeMode === 'pay_now' ? `₱${deliveryFee.toFixed(2)}` : 'Upon Fulfillment'}</span>
+              </div>
+              {deliveryBreakdown && (
+                <div className="space-y-1 pt-1">
+                  {typeof deliveryBreakdown.base === 'number' && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">Base fare</span>
+                      <span>₱{deliveryBreakdown.base.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {typeof deliveryBreakdown.first_fee === 'number' && deliveryBreakdown.first_fee > 0 && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">Distance charge</span>
+                      <span>₱{deliveryBreakdown.first_fee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {typeof deliveryBreakdown.extra_fee === 'number' && deliveryBreakdown.extra_fee > 0 && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">Extra distance</span>
+                      <span>₱{deliveryBreakdown.extra_fee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {typeof deliveryBreakdown.traffic_fee === 'number' && deliveryBreakdown.traffic_fee > 0 && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">Traffic surcharge</span>
+                      <span>₱{deliveryBreakdown.traffic_fee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {typeof deliveryBreakdown.platform_fee === 'number' && deliveryBreakdown.platform_fee > 0 && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">Platform fee</span>
+                      <span>₱{deliveryBreakdown.platform_fee.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {voucherDiscount > 0 && (
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher ({appliedVoucher?.code})</span><span className="font-semibold text-green-600">-₱{voucherDiscount.toFixed(2)}</span></div>
+              )}
+              <div className="flex justify-between pt-2 border-t border-border">
+                <span className="text-sm font-bold">Total</span>
+                <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
+              </div>
+              {deliveryFeeMode === 'upon_fulfillment' && (
+                <div className="flex justify-between text-xs pt-1">
+                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span className="font-semibold">Upon Fulfillment</span>
+                </div>
+              )}
+              {deliveryFeeMode === 'pay_now' && deliveryFee === 0 && (
+                <div className="flex justify-between text-xs pt-1">
+                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span className="font-semibold">FREE</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 4: Payment Method */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm">
           <div className="flex items-center gap-2 mb-3">
             <CreditCard className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-foreground">Step 3 | Payment Method</h2>
+            <h2 className="text-sm font-bold text-foreground">Step 4 | Payment Method</h2>
           </div>
           <div className="space-y-2">
             {paymentMethods.map(pm => (
@@ -523,80 +634,6 @@ export default function CheckoutPage() {
               </label>
             ))}
           </div>
-        </div>
-
-        {/* STEP 4: Order Summary */}
-        <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">
-          <h2 className="text-sm font-bold text-foreground mb-2">Step 4 | Order Summary</h2>
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal ({items.length} items)</span><span className="font-semibold">₱{subtotal.toFixed(2)}</span></div>
-          {fees.map((f, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{f.name}</span>
-              <span className={`font-semibold ${f.category === 'discount' ? 'text-green-600' : ''}`}>
-                {f.category === 'discount' ? '-' : '+'}₱{f.amount.toFixed(2)}
-              </span>
-            </div>
-          ))}
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground flex items-center gap-1">
-              Delivery{deliveryDistance != null ? ` (${deliveryDistance}km)` : ''}
-              {trafficActive && <span className="text-amber-600 font-bold">[Traffic]</span>}
-            </span>
-            <span className="font-semibold">{isCalculatingFee ? '...' : deliveryFeeMode === 'pay_now' ? `₱${deliveryFee.toFixed(2)}` : 'Upon Fulfillment'}</span>
-          </div>
-          {deliveryBreakdown && (
-            <div className="space-y-1 pt-1">
-              {typeof deliveryBreakdown.base === 'number' && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Base fare</span>
-                  <span>₱{deliveryBreakdown.base.toFixed(2)}</span>
-                </div>
-              )}
-              {typeof deliveryBreakdown.first_fee === 'number' && deliveryBreakdown.first_fee > 0 && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Distance charge</span>
-                  <span>₱{deliveryBreakdown.first_fee.toFixed(2)}</span>
-                </div>
-              )}
-              {typeof deliveryBreakdown.extra_fee === 'number' && deliveryBreakdown.extra_fee > 0 && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Extra distance</span>
-                  <span>₱{deliveryBreakdown.extra_fee.toFixed(2)}</span>
-                </div>
-              )}
-              {typeof deliveryBreakdown.traffic_fee === 'number' && deliveryBreakdown.traffic_fee > 0 && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Traffic surcharge</span>
-                  <span>₱{deliveryBreakdown.traffic_fee.toFixed(2)}</span>
-                </div>
-              )}
-              {typeof deliveryBreakdown.platform_fee === 'number' && deliveryBreakdown.platform_fee > 0 && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Platform fee</span>
-                  <span>₱{deliveryBreakdown.platform_fee.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          )}
-          {voucherDiscount > 0 && (
-            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher ({appliedVoucher?.code})</span><span className="font-semibold text-green-600">-₱{voucherDiscount.toFixed(2)}</span></div>
-          )}
-          <div className="flex justify-between pt-2 border-t border-border">
-            <span className="text-sm font-bold">Total</span>
-            <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
-          </div>
-          {deliveryFeeMode === 'upon_fulfillment' && (
-            <div className="flex justify-between text-xs pt-1">
-              <span className="text-muted-foreground">Delivery Fee</span>
-              <span className="font-semibold">Upon Fulfillment</span>
-            </div>
-          )}
-          {deliveryFeeMode === 'pay_now' && deliveryFee === 0 && (
-            <div className="flex justify-between text-xs pt-1">
-              <span className="text-muted-foreground">Delivery Fee</span>
-              <span className="font-semibold">FREE</span>
-            </div>
-          )}
         </div>
       </div>
 
