@@ -232,6 +232,8 @@ export interface ShippingAddress {
   city: string;
 }
 
+export type DeliveryFeePaymentMode = 'pay_now' | 'upon_fulfillment';
+
 export interface OrderItem {
   product_id: string;
   name: string;
@@ -251,6 +253,7 @@ export interface Order {
   voucher_code?: string;
   voucher_discount: number;
   delivery_fee: number;
+  delivery_fee_payment_mode?: DeliveryFeePaymentMode;
   delivery_provider_id?: string;
   delivery_tracking_url?: string | null;
   total: number;

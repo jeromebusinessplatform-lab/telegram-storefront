@@ -5,7 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { PaymentMethod, DeliveryProvider, FeeConfig, AppliedFee, Voucher, CheckoutFieldsConfig, ShippingAddress } from '@/types';
+import { PaymentMethod, DeliveryProvider, FeeConfig, AppliedFee, Voucher, CheckoutFieldsConfig, ShippingAddress, DeliveryFeePaymentMode } from '@/types';
 import { CreditCard, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddressSection from '@/components/common/AddressSection';
@@ -44,6 +44,7 @@ export default function CheckoutPage() {
   const [isCalculatingFee, setIsCalculatingFee] = useState(false);
   const [providerQuotes, setProviderQuotes] = useState<Record<string, DeliveryQuote>>({});
   const [saveForFuture, setSaveForFuture] = useState(false);
+  const [deliveryFeeMode, setDeliveryFeeMode] = useState<DeliveryFeePaymentMode>('pay_now');
   const quoteRunId = useRef(0);
 
   const [address, setAddress] = useState<ShippingAddress>({
@@ -77,11 +78,6 @@ export default function CheckoutPage() {
       setFeesConfig((fc ?? []) as unknown as FeeConfig[]);
       setCheckoutConfig((cfg?.value ?? null) as CheckoutFieldsConfig | null);
       if (pm?.length) setSelectedPayment((pm[0] as unknown) as PaymentMethod);
-      if (dp?.length) {
-        const first = (dp[0] as unknown) as DeliveryProvider;
-        setSelectedDelivery(first);
-        if (!isDynamic(first.type)) setDeliveryFee(first.config?.fee ?? 0);
-      }
     };
     fetchData();
   }, []);
@@ -208,7 +204,7 @@ export default function CheckoutPage() {
       ? (subtotal * appliedVoucher.discount_value) / 100
       : appliedVoucher.discount_value
     : 0;
-  const total = Math.max(0, subtotal + feesTotal + deliveryFee - voucherDiscount);
+  const total = Math.max(0, subtotal + feesTotal + (deliveryFeeMode === 'pay_now' ? deliveryFee : 0) - voucherDiscount);
 
   const placeOrder = async () => {
     if (!customer) { toast({ description: 'Please login via Telegram first', variant: 'destructive' }); return; }
@@ -247,6 +243,7 @@ export default function CheckoutPage() {
         voucher_code: appliedVoucher?.code ?? null,
         voucher_discount: voucherDiscount,
         delivery_fee: deliveryFee,
+        delivery_fee_payment_mode: deliveryFeeMode,
         delivery_provider_id: selectedDelivery.id,
         total,
         status: 'pending',
@@ -400,6 +397,36 @@ export default function CheckoutPage() {
               );
             })}
           </div>
+          {selectedDelivery && (
+            <div className="mt-3 rounded-xl border border-border bg-background p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-foreground">Delivery Fee Payment</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Choose whether the delivery fee is paid now or upon fulfillment.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryFeeMode('pay_now')}
+                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'pay_now' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
+                >
+                  <p className="text-xs font-bold text-foreground">Pay now</p>
+                  <p className="text-[11px] text-muted-foreground">Add the delivery fee to the order total</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryFeeMode('upon_fulfillment')}
+                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${deliveryFeeMode === 'upon_fulfillment' ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}
+                >
+                  <p className="text-xs font-bold text-foreground">Upon fulfillment</p>
+                  <p className="text-[11px] text-muted-foreground">Keep fee due later after delivery</p>
+                </button>
+              </div>
+            </div>
+          )}
           {trafficActive && (
             <div className="mt-2 flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 rounded-lg px-3 py-2">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
@@ -449,7 +476,7 @@ export default function CheckoutPage() {
               Delivery{deliveryDistance != null ? ` (${deliveryDistance}km)` : ''}
               {trafficActive && <span className="text-amber-600 font-bold">[Traffic]</span>}
             </span>
-            <span className="font-semibold">{isCalculatingFee ? '...' : `₱${deliveryFee.toFixed(2)}`}</span>
+            <span className="font-semibold">{isCalculatingFee ? '...' : deliveryFeeMode === 'pay_now' ? `₱${deliveryFee.toFixed(2)}` : 'Upon Fulfillment'}</span>
           </div>
           {deliveryBreakdown && (
             <div className="space-y-1 pt-1">
@@ -492,6 +519,18 @@ export default function CheckoutPage() {
             <span className="text-sm font-bold">Total</span>
             <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
           </div>
+          {deliveryFeeMode === 'upon_fulfillment' && (
+            <div className="flex justify-between text-xs pt-1">
+              <span className="text-muted-foreground">Delivery Fee</span>
+              <span className="font-semibold">Upon Fulfillment</span>
+            </div>
+          )}
+          {deliveryFeeMode === 'pay_now' && deliveryFee === 0 && (
+            <div className="flex justify-between text-xs pt-1">
+              <span className="text-muted-foreground">Delivery Fee</span>
+              <span className="font-semibold">FREE</span>
+            </div>
+          )}
         </div>
       </div>
 

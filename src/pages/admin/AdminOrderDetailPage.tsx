@@ -58,7 +58,8 @@ export default function AdminOrderDetailPage() {
     if (!order) return;
     setIsSaving(true);
 
-    const newDeliveryFee = parseFloat(deliveryFeeOverride) || order.delivery_fee;
+    const parsedOverride = Number(deliveryFeeOverride);
+    const newDeliveryFee = Number.isFinite(parsedOverride) ? Math.max(0, parsedOverride) : order.delivery_fee;
     const feeDiff = newDeliveryFee - order.delivery_fee;
     const newTotal = Math.max(0, order.total + feeDiff);
     await supabase.from('orders').update({
@@ -181,6 +182,10 @@ export default function AdminOrderDetailPage() {
   const deliveryProvider = order.delivery_providers as {name: string} | null;
   const shippingAddr = order.shipping_address;
   const isDispatched = status === 'dispatched';
+  const effectiveDeliveryFee = Number.isFinite(Number(deliveryFeeOverride)) ? Math.max(0, Number(deliveryFeeOverride)) : order.delivery_fee;
+  const deliveryFeeLabel = effectiveDeliveryFee <= 0 ? 'FREE' : `₱${effectiveDeliveryFee.toFixed(2)}`;
+  const feeDiff = effectiveDeliveryFee - order.delivery_fee;
+  const liveTotal = Math.max(0, order.total + feeDiff);
 
   return (
     <AdminLayout title={`Order ${order.order_number}`}>
@@ -262,18 +267,19 @@ export default function AdminOrderDetailPage() {
                   value={deliveryFeeOverride}
                   onChange={e => setDeliveryFeeOverride(e.target.value)}
                   className="h-6 w-20 text-xs font-bold text-right border-amber-400 focus:border-amber-500"
-                  step="0.50"
+                  step="0.01"
                   min="0"
                 />
               </div>
             </div>
-            {parseFloat(deliveryFeeOverride) !== order.delivery_fee && (
+            {effectiveDeliveryFee !== order.delivery_fee && (
               <p className="text-[10px] text-amber-600 text-right">
-                Original: ₱{order.delivery_fee.toFixed(2)} → New total: ₱{Math.max(0, order.total + (parseFloat(deliveryFeeOverride) || 0) - order.delivery_fee).toFixed(2)}
+                Original: ₱{order.delivery_fee.toFixed(2)} → New total: ₱{liveTotal.toFixed(2)}
               </p>
             )}
             {order.voucher_discount > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Voucher</span><span className="text-green-600">-₱{order.voucher_discount.toFixed(2)}</span></div>}
-            <div className="flex justify-between font-bold text-sm border-t border-border pt-1"><span>Total</span><span className="text-primary">₱{order.total.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Delivery Fee</span><span className="font-semibold">{deliveryFeeLabel}</span></div>
+            <div className="flex justify-between font-bold text-sm border-t border-border pt-1"><span>Total</span><span className="text-primary">₱{liveTotal.toFixed(2)}</span></div>
           </div>
         </div>
 

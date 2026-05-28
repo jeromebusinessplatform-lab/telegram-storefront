@@ -106,6 +106,10 @@ export default function AddressSection({
     }
   }, [customer]);
 
+  useEffect(() => {
+    setSearchQuery(address.address || '');
+  }, [address.address]);
+
   // Debounced address search
   const searchAddress = useCallback((query: string) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
