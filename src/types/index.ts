@@ -146,6 +146,7 @@ export interface PaymentMethod {
 // ─── Delivery Provider ────────────────────────────────────────────────────────
 export interface DeliveryConfig {
   service_type?: string;
+  pricing_profile?: 'standard' | 'tier_2' | 'tier_3';
   instructions?: string;
   fee?: number;
   logo_url?: string;

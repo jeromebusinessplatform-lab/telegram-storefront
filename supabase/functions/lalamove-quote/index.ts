@@ -5,6 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type DeliveryProviderRow = {
+  id: string;
+  type: string;
+  config: {
+    pricing_profile?: "standard" | "tier_2" | "tier_3";
+    fee?: number;
+    instructions?: string;
+    logo_url?: string;
+  } | null;
+};
+
+type FeeProfile = {
+  baseFare: number;
+  firstKmRate: number;
+  extraRate: number;
+};
+
+const DELIVERY_PROFILES: Record<string, FeeProfile> = {
+  standard: { baseFare: 60, firstKmRate: 8, extraRate: 6.5 },
+  tier_2: { baseFare: 65, firstKmRate: 8, extraRate: 11 },
+  tier_3: { baseFare: 70, firstKmRate: 8, extraRate: 8 },
+};
+
 /** Haversine distance in km */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -32,23 +55,29 @@ function isTrafficHours(): boolean {
   return morningRush || eveningRush;
 }
 
+function getFeeProfile(profileKey?: string | null): FeeProfile {
+  return DELIVERY_PROFILES[profileKey ?? "standard"] ?? DELIVERY_PROFILES.standard;
+}
+
 /**
- * Fee formula (applies to ALL delivery providers):
- * - Base fare        : ₱60
- * - First 4.5 km     : ₱8.00 / km
- * - 4.5 km – 5 km   : no extra charge (bridge zone)
- * - Beyond 5 km      : ₱6.50 / km  (+ ₱2.00 traffic surcharge during peak hours)
+ * Fee formula for the dynamic delivery profiles:
+ * - Base fare        : profile-dependent
+ * - First 4.9 km     : ₱8.00 / km
+ * - 4.9 km – 5 km   : no extra charge (bridge zone)
+ * - Beyond 5 km      : profile-dependent / km (+ ₱2.00 traffic surcharge during peak hours)
  */
 function calcDeliveryFee(
   distanceKm: number,
-  trafficActive: boolean
+  trafficActive: boolean,
+  profileKey?: string | null
 ): { fee: number; breakdown: Record<string, number>; traffic_active: boolean } {
-  const BASE = 60;
-  const FIRST_CAP_KM = 4.5;
-  const RATE_FIRST = 8.0;      // ₱8 / km for first 4.5 km
+  const profile = getFeeProfile(profileKey);
+  const BASE = profile.baseFare;
+  const FIRST_CAP_KM = 4.9;
+  const RATE_FIRST = profile.firstKmRate; // ₱8 / km for first 4.9 km
   const THRESHOLD_KM = 5.0;
-  const RATE_EXTRA = 6.5;      // ₱6.50 / km beyond 5 km
-  const TRAFFIC_ADD = 2.0;     // ₱2.00 / km surcharge during rush hour
+  const RATE_EXTRA = profile.extraRate;
+  const TRAFFIC_ADD = 2.0;
 
   const firstKm = Math.min(distanceKm, FIRST_CAP_KM);
   const firstFee = firstKm * RATE_FIRST;
@@ -97,11 +126,14 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let providerProfile: string | null | undefined = undefined;
+
   try {
     const body = await req.json();
     const destination_address: string = body.destination_address ?? "";
     const dest_lat: number | undefined = body.dest_lat;
     const dest_lng: number | undefined = body.dest_lng;
+    const deliveryProviderId: string | undefined = body.delivery_provider_id;
 
     if (!destination_address && (dest_lat === undefined || dest_lng === undefined)) {
       return new Response(
@@ -121,6 +153,16 @@ Deno.serve(async (req) => {
     const pickupLat = storeInfo?.pickup_lat ?? 14.7103888;
     const pickupLng = storeInfo?.pickup_lng ?? 121.0544856;
 
+    if (deliveryProviderId) {
+      const { data: providerRow } = await supabase
+        .from("delivery_providers")
+        .select("id, type, config")
+        .eq("id", deliveryProviderId)
+        .maybeSingle();
+      const provider = providerRow as DeliveryProviderRow | null;
+      providerProfile = provider?.config?.pricing_profile;
+    }
+
     // Resolve destination coordinates
     let destLat = dest_lat;
     let destLng = dest_lng;
@@ -129,7 +171,7 @@ Deno.serve(async (req) => {
       if (!coords) {
         // Fallback: base fee only
         const trafficNow = isTrafficHours();
-        const { fee, breakdown, traffic_active } = calcDeliveryFee(0, trafficNow);
+        const { fee, breakdown, traffic_active } = calcDeliveryFee(0, trafficNow, providerProfile);
         return new Response(
           JSON.stringify({ fee, distance_km: null, traffic_active, breakdown, message: "Could not geocode — base fee applied" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -141,7 +183,7 @@ Deno.serve(async (req) => {
 
     const distanceKm = haversineKm(pickupLat, pickupLng, destLat, destLng);
     const trafficNow = isTrafficHours();
-    const { fee, breakdown, traffic_active } = calcDeliveryFee(distanceKm, trafficNow);
+    const { fee, breakdown, traffic_active } = calcDeliveryFee(distanceKm, trafficNow, providerProfile);
 
     console.log(`Distance: ${distanceKm.toFixed(2)} km | Traffic: ${trafficNow} | Fee: ₱${fee}`);
 
@@ -157,8 +199,9 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("delivery-fee error:", error);
+    const { fee } = calcDeliveryFee(0, false, providerProfile);
     return new Response(
-      JSON.stringify({ fee: 60, message: "Error calculating fee" }),
+      JSON.stringify({ fee, message: "Error calculating fee" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -14,7 +14,25 @@ import { Plus, Pencil, Trash2, Truck, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
-const EMPTY = { name: '', type: 'dynamic', fee: '0', instructions: '', logo_url: '', is_active: true };
+const EMPTY = { name: '', type: 'dynamic', pricing_profile: 'standard', fee: '0', instructions: '', logo_url: '', is_active: true };
+
+const DYNAMIC_PROFILES = [
+  {
+    value: 'standard',
+    label: 'Dynamic 1',
+    description: '₱60 base + ₱8/km for first 4.9 km + ₱6.50/km beyond 5 km',
+  },
+  {
+    value: 'tier_2',
+    label: 'Dynamic 2',
+    description: '₱65 base + ₱8/km for first 4.9 km + ₱11/km beyond 5 km',
+  },
+  {
+    value: 'tier_3',
+    label: 'Dynamic 3',
+    description: '₱70 base + ₱8/km for first 4.9 km + ₱8/km beyond 5 km',
+  },
+] as const;
 
 export default function AdminDeliveryPage() {
   const { toast } = useToast();
@@ -36,6 +54,7 @@ export default function AdminDeliveryPage() {
     setForm({
       name: p.name,
       type: p.type === 'lalamove' ? 'dynamic' : p.type,
+      pricing_profile: p.config?.pricing_profile ?? 'standard',
       fee: String(p.config?.fee ?? 0),
       instructions: p.config?.instructions ?? '',
       logo_url: p.logo_url ?? p.config?.logo_url ?? '',
@@ -50,7 +69,11 @@ export default function AdminDeliveryPage() {
     const payload = {
       name: form.name,
       type: form.type as 'dynamic' | 'manual',
-      config: { fee: parseFloat(form.fee) || 0, instructions: form.instructions },
+      config: {
+        pricing_profile: form.type === 'dynamic' ? form.pricing_profile : undefined,
+        fee: parseFloat(form.fee) || 0,
+        instructions: form.instructions,
+      },
       logo_url: form.logo_url || null,
       is_active: form.is_active,
     };
@@ -139,10 +162,25 @@ export default function AdminDeliveryPage() {
                 <SelectContent>
                   <SelectItem value="dynamic">Dynamic (distance-based fee)</SelectItem>
                   <SelectItem value="manual">Manual (fixed fee)</SelectItem>
-                </SelectContent>
+              </SelectContent>
               </Select>
               {isDynamic(form.type) && (
-                <p className="text-[10px] text-muted-foreground mt-1">₱60 + ₱8 (≤4.5km) + ₱6.50/km beyond 5km</p>
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <Label className="text-xs">Dynamic Pricing System</Label>
+                    <Select value={form.pricing_profile} onValueChange={v => setForm(p => ({ ...p, pricing_profile: v }))}>
+                      <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {DYNAMIC_PROFILES.map(profile => (
+                          <SelectItem key={profile.value} value={profile.value}>{profile.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {DYNAMIC_PROFILES.find(profile => profile.value === form.pricing_profile)?.description}
+                  </p>
+                </div>
               )}
             </div>
             {form.type === 'manual' && (

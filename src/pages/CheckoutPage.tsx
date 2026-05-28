@@ -95,7 +95,12 @@ export default function CheckoutPage() {
     setIsCalculatingFee(true);
     try {
       const { data } = await supabase.functions.invoke('lalamove-quote', {
-        body: { dest_lat: lat, dest_lng: lng, destination_address: `${address.address}, ${address.city}` },
+        body: {
+          dest_lat: lat,
+          dest_lng: lng,
+          destination_address: `${address.address}, ${address.city}`,
+          delivery_provider_id: selectedDelivery?.id,
+        },
       });
       if (data?.fee) {
         setDeliveryFee(data.fee);
@@ -111,7 +116,10 @@ export default function CheckoutPage() {
     setIsCalculatingFee(true);
     try {
       const { data } = await supabase.functions.invoke('lalamove-quote', {
-        body: { destination_address: `${address.address}, ${address.city}${address.province ? ', ' + address.province : ''}` },
+        body: {
+          destination_address: `${address.address}, ${address.city}${address.province ? ', ' + address.province : ''}`,
+          delivery_provider_id: selectedDelivery?.id,
+        },
       });
       if (data?.fee) {
         setDeliveryFee(data.fee);
