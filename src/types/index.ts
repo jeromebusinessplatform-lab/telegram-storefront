@@ -220,6 +220,8 @@ export type OrderStatus =
 export interface ShippingAddress {
   name: string;
   phone: string;
+  other_contact_no?: string;
+  referral_code?: string;
   house_number: string;
   street_name: string;
   street_type: string;

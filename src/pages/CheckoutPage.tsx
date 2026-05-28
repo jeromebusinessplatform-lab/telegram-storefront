@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PaymentMethod, DeliveryProvider, FeeConfig, AppliedFee, Voucher, CheckoutFieldsConfig, ShippingAddress, DeliveryFeePaymentMode } from '@/types';
 import { CreditCard, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +51,8 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState<ShippingAddress>({
     name: customer ? `${customer.telegram_first_name ?? ''} ${customer.telegram_last_name ?? ''}`.trim() : '',
     phone: customer?.phone ?? '',
+    other_contact_no: '',
+    referral_code: '',
     house_number: '',
     street_name: '',
     street_type: '',
@@ -334,6 +337,44 @@ export default function CheckoutPage() {
             <div className="col-span-2 rounded-lg border border-border bg-background px-3 py-2.5">
               <p className="text-[11px] text-muted-foreground">Internal Customer ID</p>
               <p className="text-xs font-bold text-foreground break-all">{customer?.id ?? 'N/A'}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="col-span-2">
+              <label className="text-[11px] font-medium text-foreground">Name *</label>
+              <Input
+                value={address.name}
+                onChange={e => setAddress(p => ({ ...p, name: e.target.value }))}
+                placeholder="Full name"
+                className="mt-0.5 h-9 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-foreground">Contact No. *</label>
+              <Input
+                value={address.phone}
+                onChange={e => setAddress(p => ({ ...p, phone: e.target.value }))}
+                placeholder="09XXXXXXXXX"
+                className="mt-0.5 h-9 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-foreground">Other Contact No. <span className="text-muted-foreground">(Optional)</span></label>
+              <Input
+                value={address.other_contact_no ?? ''}
+                onChange={e => setAddress(p => ({ ...p, other_contact_no: e.target.value }))}
+                placeholder="Alternative number"
+                className="mt-0.5 h-9 text-xs"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[11px] font-medium text-foreground">Referral Code <span className="text-muted-foreground">(Optional)</span></label>
+              <Input
+                value={address.referral_code ?? ''}
+                onChange={e => setAddress(p => ({ ...p, referral_code: e.target.value }))}
+                placeholder="Enter referral code"
+                className="mt-0.5 h-9 text-xs"
+              />
             </div>
           </div>
         </div>
