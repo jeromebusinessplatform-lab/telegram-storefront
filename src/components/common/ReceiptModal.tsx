@@ -28,6 +28,14 @@ const DEFAULT_CONFIG: ReceiptFieldsConfig = {
 export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CONFIG, storeName = 'PRIME CORE' }: ReceiptModalProps) {
   const customer = order.customers;
   const paymentMethod = order.payment_methods;
+  const mayaReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.maya as Record<string, unknown> | undefined;
+  const mayaPaymentStatus = String(mayaReceipt?.payment_status ?? '').trim();
+  const mayaPaymentLabel = {
+    PAYMENT_SUCCESS: 'Paid',
+    PAYMENT_FAILED: 'Failed',
+    PAYMENT_EXPIRED: 'Expired',
+    PAYMENT_CANCELLED: 'Cancelled',
+  }[mayaPaymentStatus] ?? (mayaPaymentStatus || null);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -123,6 +131,30 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
               </div>
             )}
           </div>
+
+          {(paymentMethod?.type === 'maya' || mayaReceipt) && (
+            <div className="border-t border-dashed border-border pt-3 space-y-1 text-xs">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Maya Payment</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span className={`font-semibold ${mayaPaymentStatus === 'PAYMENT_SUCCESS' || order.status === 'payment_verified' ? 'text-green-600' : ''}`}>
+                  {order.status === 'payment_verified' ? 'Paid' : (mayaPaymentLabel ?? 'Pending')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Checkout ID</span>
+                <span className="font-mono font-semibold break-all">{String(mayaReceipt?.checkout_id ?? order.maya_checkout_id ?? 'N/A')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment ID</span>
+                <span className="font-mono font-semibold break-all">{String(mayaReceipt?.payment_id ?? 'N/A')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Reference</span>
+                <span className="font-mono font-semibold break-all">{String(mayaReceipt?.request_reference_number ?? order.id)}</span>
+              </div>
+            </div>
+          )}
 
           {config.show_total && (
             <div className="border-t-2 border-border pt-2 flex justify-between">

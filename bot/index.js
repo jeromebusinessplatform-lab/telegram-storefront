@@ -8,6 +8,10 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET ?? '';
 const PORT = Number(process.env.PORT ?? '3000');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const MAYA_WEBHOOK_ALLOWED_IPS = (process.env.MAYA_WEBHOOK_ALLOWED_IPS ?? '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 const ADMIN_CHAT_IDS = (process.env.TELEGRAM_ADMIN_CHAT_IDS ?? '')
   .split(',')
   .map((value) => value.trim())
@@ -98,6 +102,150 @@ async function sendMobileAuthReturn(chatId, nonce) {
       ],
     },
   });
+}
+
+function getRequestIp(req) {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const ipFromForwarded = typeof forwardedFor === 'string'
+    ? forwardedFor.split(',')[0]?.trim()
+    : Array.isArray(forwardedFor)
+      ? forwardedFor[0]?.split(',')[0]?.trim()
+      : '';
+  const realIp = typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'].trim() : '';
+  const socketIp = req.socket?.remoteAddress ?? '';
+  return ipFromForwarded || realIp || socketIp;
+}
+
+function isAllowedMayaWebhookIp(req) {
+  if (MAYA_WEBHOOK_ALLOWED_IPS.length === 0) return true;
+  const requestIp = getRequestIp(req);
+  if (!requestIp) return false;
+  const normalized = requestIp.replace('::ffff:', '');
+  return MAYA_WEBHOOK_ALLOWED_IPS.some((allowedIp) => allowedIp === requestIp || allowedIp === normalized);
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  return rawBody ? JSON.parse(rawBody) : {};
+}
+
+function getReceiptData(receiptData) {
+  return receiptData && typeof receiptData === 'object' && !Array.isArray(receiptData)
+    ? receiptData
+    : {};
+}
+
+function buildMayaReceiptState(payload) {
+  const paymentStatus = String(payload?.paymentStatus ?? payload?.status ?? '').trim();
+  const mayaCheckoutId = String(payload?.checkoutId ?? payload?.checkout_id ?? payload?.id ?? '').trim() || null;
+  const paymentId = String(payload?.paymentId ?? payload?.payment_id ?? payload?.id ?? '').trim() || null;
+  const requestReferenceNumber = String(
+    payload?.requestReferenceNumber
+    ?? payload?.request_reference_number
+    ?? payload?.metadata?.order_id
+    ?? payload?.metadata?.order_number
+    ?? ''
+  ).trim() || null;
+
+  return {
+    maya: {
+      event_id: String(payload?.id ?? `${paymentStatus}-${requestReferenceNumber ?? 'unknown'}`),
+      payment_status: paymentStatus || null,
+      payment_id: paymentId,
+      checkout_id: mayaCheckoutId,
+      request_reference_number: requestReferenceNumber,
+      updated_at: new Date().toISOString(),
+      payload,
+    },
+  };
+}
+
+async function findOrderForMayaWebhook(payload) {
+  const candidates = [
+    payload?.metadata?.order_id,
+    payload?.metadata?.order_number,
+    payload?.requestReferenceNumber,
+    payload?.request_reference_number,
+    payload?.referenceNumber,
+    payload?.reference_number,
+  ]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean);
+
+  const checkoutId = String(payload?.checkoutId ?? payload?.checkout_id ?? '').trim();
+
+  for (const candidate of candidates) {
+    const { data } = await supabase
+      .from('orders')
+      .select('*, customers(*), payment_methods(*)')
+      .eq('id', candidate)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  if (checkoutId) {
+    const { data } = await supabase
+      .from('orders')
+      .select('*, customers(*), payment_methods(*)')
+      .eq('maya_checkout_id', checkoutId)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  return null;
+}
+
+async function sendMayaPaymentNotification(order, payload, paymentStatus) {
+  const orderNumber = order?.order_number ?? order?.id ?? 'Unknown';
+  const customerTelegramId = order?.customers?.telegram_id;
+  const paymentId = payload?.paymentId ?? payload?.payment_id ?? payload?.id ?? 'N/A';
+  const checkoutId = payload?.checkoutId ?? payload?.checkout_id ?? order?.maya_checkout_id ?? 'N/A';
+  const referenceNumber = payload?.requestReferenceNumber ?? payload?.request_reference_number ?? order?.id ?? 'N/A';
+  const statusLabel = paymentStatus === 'PAYMENT_SUCCESS'
+    ? 'Paid'
+    : paymentStatus === 'PAYMENT_FAILED'
+      ? 'Failed'
+      : paymentStatus === 'PAYMENT_EXPIRED'
+        ? 'Expired'
+        : paymentStatus === 'PAYMENT_CANCELLED'
+          ? 'Cancelled'
+          : paymentStatus || 'Updated';
+
+  const messageLines = [
+    `<b>Maya Payment ${statusLabel}</b>`,
+    `<b>Order:</b> ${orderNumber}`,
+    `<b>Amount:</b> ₱${Number(order?.total ?? 0).toFixed(2)}`,
+    `<b>Status:</b> ${statusLabel}`,
+    `<b>Reference:</b> ${referenceNumber}`,
+    `<b>Checkout ID:</b> ${checkoutId}`,
+    `<b>Payment ID:</b> ${paymentId}`,
+  ];
+
+  const text = messageLines.join('\n');
+
+  if (customerTelegramId) {
+    await telegramApi('sendMessage', {
+      chat_id: customerTelegramId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [[{
+          text: 'View Order',
+          web_app: { url: `${WEBAPP_URL.replace(/\/$/, '')}/orders/${order.id}` },
+        }]],
+      },
+    });
+  }
+
+  for (const adminChatId of ADMIN_CHAT_IDS) {
+    await telegramApi('sendMessage', {
+      chat_id: adminChatId,
+      text,
+      parse_mode: 'HTML',
+    });
+  }
 }
 
 async function getOpenThreadByCustomer(chatId) {
@@ -250,10 +398,104 @@ async function handleUpdate(update) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
     return;
+  }
+
+  if (req.method === 'POST' && requestUrl.pathname === '/webhooks/maya') {
+    if (!isAllowedMayaWebhookIp(req)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden' }));
+      return;
+    }
+
+    try {
+      const payload = await readJsonBody(req);
+      const paymentStatus = String(payload?.paymentStatus ?? payload?.status ?? '').trim();
+      const eventId = String(payload?.id ?? payload?.eventId ?? payload?.event_id ?? '').trim();
+
+      if (!paymentStatus) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ignored: true, reason: 'missing_payment_status' }));
+        return;
+      }
+
+      const order = await findOrderForMayaWebhook(payload);
+      if (!order) {
+        console.warn('Maya webhook received but no matching order found:', {
+          paymentStatus,
+          eventId,
+          requestReferenceNumber: payload?.requestReferenceNumber ?? payload?.metadata?.order_id ?? null,
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ignored: true, reason: 'order_not_found' }));
+        return;
+      }
+
+      const receiptData = getReceiptData(order.receipt_data);
+      const processedIds = Array.isArray(receiptData.maya_processed_webhook_ids)
+        ? receiptData.maya_processed_webhook_ids
+        : [];
+
+      if (eventId && processedIds.includes(eventId)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, duplicate: true }));
+        return;
+      }
+
+      const nextReceiptData = {
+        ...receiptData,
+        ...buildMayaReceiptState(payload),
+        maya_processed_webhook_ids: eventId
+          ? Array.from(new Set([...processedIds, eventId]))
+          : processedIds,
+      };
+
+      const nextStatus = paymentStatus === 'PAYMENT_SUCCESS'
+        ? 'payment_verified'
+        : paymentStatus === 'PAYMENT_CANCELLED' || paymentStatus === 'PAYMENT_EXPIRED' || paymentStatus === 'PAYMENT_FAILED'
+          ? 'cancelled'
+          : order.status;
+
+      const updatePayload = {
+        receipt_data: nextReceiptData,
+        maya_checkout_id: String(payload?.checkoutId ?? payload?.checkout_id ?? order.maya_checkout_id ?? '').trim() || order.maya_checkout_id || null,
+        status: nextStatus,
+      };
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', order.id);
+
+      if (updateError) {
+        console.error('Failed to update order from Maya webhook:', updateError);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, warning: 'order_update_failed' }));
+        return;
+      }
+
+      if (paymentStatus === 'PAYMENT_SUCCESS' && order.status !== 'payment_verified') {
+        try {
+          await sendMayaPaymentNotification(order, payload, paymentStatus);
+        } catch (notifyError) {
+          console.error('Failed to send Maya payment notification:', notifyError);
+        }
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    } catch (error) {
+      console.error('Maya webhook error:', error);
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Bad request' }));
+      return;
+    }
   }
 
   if (req.method === 'POST' && req.url === '/webhook/telegram') {

@@ -9,9 +9,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { order_id, amount, description, success_url, cancel_url } = await req.json();
+    const { order_id, order_number, amount, description, success_url, cancel_url } = await req.json();
 
     const MAYA_SECRET_KEY = Deno.env.get("MAYA_SECRET_KEY") ?? "";
+    const MAYA_API_BASE_URL = (Deno.env.get("MAYA_API_BASE_URL") ?? "https://pg.paymaya.com").replace(/\/$/, "");
     if (!MAYA_SECRET_KEY) {
       return new Response(JSON.stringify({ error: "Maya secret key not configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -25,10 +26,10 @@ Deno.serve(async (req) => {
       items: [{ name: description, quantity: 1, totalAmount: { value: amount, currency: "PHP" } }],
       redirectUrl: { success: success_url, failure: cancel_url, cancel: cancel_url },
       requestReferenceNumber: order_id,
-      metadata: { order_id },
+      metadata: { order_id, order_number },
     };
 
-    const response = await fetch("https://pg.paymaya.com/checkout/v1/checkouts", {
+    const response = await fetch(`${MAYA_API_BASE_URL}/checkout/v1/checkouts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

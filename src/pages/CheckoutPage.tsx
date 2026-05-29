@@ -385,6 +385,31 @@ export default function CheckoutPage() {
         await supabase.from('customers').update({ saved_addresses: nextSaved }).eq('id', customer.id);
       }
 
+      if (selectedPayment.type === 'maya') {
+        const { data: mayaCheckout, error: mayaError } = await supabase.functions.invoke('maya-checkout', {
+          body: {
+            order_id: order.id,
+            order_number: order.order_number,
+            amount: total,
+            description: `Order ${order.order_number}`,
+            success_url: `${window.location.origin}/orders/${order.id}?payment=maya&status=success`,
+            cancel_url: `${window.location.origin}/orders/${order.id}?payment=maya&status=cancelled`,
+          },
+        });
+
+        if (mayaError || !mayaCheckout?.checkout_url) {
+          throw mayaError ?? new Error('Maya checkout creation failed');
+        }
+
+        await supabase.from('orders').update({
+          maya_checkout_id: mayaCheckout.checkout_id ?? null,
+        }).eq('id', order.id);
+
+        clearCart();
+        window.location.assign(mayaCheckout.checkout_url);
+        return;
+      }
+
       if (isRedirectPaymentMethod(selectedPayment) && selectedPayment.details?.gateway_url) {
         clearCart();
         window.open(selectedPayment.details.gateway_url, '_blank', 'noopener,noreferrer');

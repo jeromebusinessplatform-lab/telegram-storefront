@@ -139,6 +139,14 @@ export default function OrderDetailPage() {
   const usesManualQrPayment = isManualPaymentMethod(paymentMethod);
   const needsProof = usesManualQrPayment && order.status === 'pending';
   const canTrackCourier = order.status === 'dispatched' && !!trackingUrl;
+  const mayaReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.maya as Record<string, unknown> | undefined;
+  const mayaPaymentStatus = String(mayaReceipt?.payment_status ?? '').trim();
+  const mayaPaymentLabel = {
+    PAYMENT_SUCCESS: 'Paid',
+    PAYMENT_FAILED: 'Failed',
+    PAYMENT_EXPIRED: 'Expired',
+    PAYMENT_CANCELLED: 'Cancelled',
+  }[mayaPaymentStatus] ?? (mayaPaymentStatus || 'Pending');
 
   return (
     <AppLayout showBack title="Order Details">
@@ -239,6 +247,26 @@ export default function OrderDetailPage() {
             <span className="font-black text-sm text-primary">₱{order.total.toFixed(2)}</span>
           </div>
         </div>
+
+        {(paymentMethod?.type === 'maya' || mayaReceipt) && (
+          <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">
+            <h3 className="text-sm font-bold text-foreground mb-2">Maya Payment</h3>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Status</span>
+              <span className={`font-semibold ${order.status === 'payment_verified' || mayaPaymentStatus === 'PAYMENT_SUCCESS' ? 'text-green-600' : ''}`}>
+                {order.status === 'payment_verified' ? 'Paid' : mayaPaymentLabel}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Checkout ID</span>
+              <span className="font-mono break-all">{String(mayaReceipt?.checkout_id ?? order.maya_checkout_id ?? 'N/A')}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Payment ID</span>
+              <span className="font-mono break-all">{String(mayaReceipt?.payment_id ?? 'N/A')}</span>
+            </div>
+          </div>
+        )}
 
         {/* Payment Method - QR */}
         {usesManualQrPayment && paymentMethod?.details?.qr_image && (
