@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, ReceiptFieldsConfig } from '@/types';
@@ -8,11 +8,13 @@ import ReceiptModal from '@/components/common/ReceiptModal';
 import ImagePreviewDialog from '@/components/common/ImagePreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, Image as ImageIcon, Truck, Copy, QrCode } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Truck, Copy, QrCode, CheckCircle2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { isManualPaymentMethod } from '@/lib/payment-method';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -25,6 +27,8 @@ export default function OrderDetailPage() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [showPaymentQr, setShowPaymentQr] = useState(false);
   const [showSubmittedProof, setShowSubmittedProof] = useState(false);
+  const [showSubmittedBanner, setShowSubmittedBanner] = useState(Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted));
+  const [orderNumberCopied, setOrderNumberCopied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +50,12 @@ export default function OrderDetailPage() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [id]);
+
+  useEffect(() => {
+    if (!showSubmittedBanner) return;
+    const timer = setTimeout(() => setShowSubmittedBanner(false), 4200);
+    return () => clearTimeout(timer);
+  }, [showSubmittedBanner]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,9 +102,12 @@ export default function OrderDetailPage() {
   };
 
   const copyOrderNumber = async () => {
+    if (!order) return;
     try {
       await navigator.clipboard.writeText(order.order_number);
+      setOrderNumberCopied(true);
       toast({ description: 'Order number copied.' });
+      window.setTimeout(() => setOrderNumberCopied(false), 1800);
     } catch {
       toast({ description: 'Copy failed. Please try again.', variant: 'destructive' });
     }
@@ -121,15 +134,48 @@ export default function OrderDetailPage() {
     );
   }
 
-  const paymentMethod = order.payment_methods as unknown as {name: string; type: string; details: {qr_image?: string; instructions?: string}} | null;
+  const paymentMethod = order.payment_methods as unknown as {name: string; type: string; details: {qr_image?: string; instructions?: string; wallet_address?: string; gateway_url?: string; bank_name?: string; account_name?: string; account_number?: string; account_type?: string}} | null;
   const trackingUrl = order.delivery_tracking_url?.trim() ?? '';
-  const usesManualQrPayment = paymentMethod?.type === 'qrph' || paymentMethod?.type === 'custom';
+  const usesManualQrPayment = isManualPaymentMethod(paymentMethod);
   const needsProof = usesManualQrPayment && order.status === 'pending';
   const canTrackCourier = order.status === 'dispatched' && !!trackingUrl;
 
   return (
     <AppLayout showBack title="Order Details">
       <div className="px-3 py-3 space-y-3 pb-4">
+        {showSubmittedBanner && (
+          <div className="relative overflow-hidden rounded-xl border border-emerald-300/40 bg-gradient-to-br from-emerald-500/10 via-background to-primary/5 p-4 shadow-brand-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.12),transparent_35%)]" />
+            <div className="relative flex items-center gap-3">
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+                <span className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                <CheckCircle2 className="relative h-7 w-7 animate-bounce" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-foreground">Order Submitted</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Your order has been received and a bot message has been sent to your Telegram account.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-mono font-bold text-primary break-all">
+                    {order.order_number}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyOrderNumber}
+                    className="h-7 px-2 text-[10px] gap-1 border-primary/30 text-primary"
+                  >
+                    {orderNumberCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {orderNumberCopied ? 'Copied!' : 'Copy'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Status card */}
         <div className="bg-gradient-card rounded-xl p-4 border border-primary/10">
           <div className="flex items-start justify-between">
@@ -146,8 +192,8 @@ export default function OrderDetailPage() {
                 onClick={copyOrderNumber}
                 className="h-6 px-2 text-[10px] gap-1 border-primary/30 text-primary"
               >
-                <Copy className="w-3 h-3" />
-                Copy
+                {orderNumberCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {orderNumberCopied ? 'Copied!' : 'Copy'}
               </Button>
             </div>
           </div>

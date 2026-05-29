@@ -13,8 +13,40 @@ import ImageUploadInput from '@/components/common/ImageUploadInput';
 import { Plus, Pencil, Trash2, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { PAYMENT_METHOD_LABELS } from '@/lib/payment-method';
+import ImagePreviewDialog from '@/components/common/ImagePreviewDialog';
 
-const EMPTY = { name: '', type: 'custom', instructions: '', qr_image: '', account_name: '', account_number: '', is_active: true, sort_order: 0 };
+type PaymentMethodForm = {
+  name: string;
+  type: PaymentMethod['type'];
+  instructions: string;
+  logo_url: string;
+  qr_image: string;
+  wallet_address: string;
+  gateway_url: string;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  account_type: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+const EMPTY: PaymentMethodForm = {
+  name: '',
+  type: 'static_qr_code',
+  instructions: '',
+  logo_url: '',
+  qr_image: '',
+  wallet_address: '',
+  gateway_url: '',
+  bank_name: '',
+  account_name: '',
+  account_number: '',
+  account_type: '',
+  is_active: true,
+  sort_order: 0,
+};
 
 export default function AdminPaymentMethodsPage() {
   const { toast } = useToast();
@@ -22,6 +54,7 @@ export default function AdminPaymentMethodsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editMethod, setEditMethod] = useState<PaymentMethod | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [form, setForm] = useState(EMPTY);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -35,11 +68,17 @@ export default function AdminPaymentMethodsPage() {
   const openEdit = (m: PaymentMethod) => {
     setEditMethod(m);
     setForm({
-      name: m.name, type: m.type,
+      name: m.name,
+      type: m.type,
       instructions: m.details?.instructions ?? '',
+      logo_url: m.details?.logo_url ?? '',
       qr_image: m.details?.qr_image ?? '',
+      wallet_address: m.details?.wallet_address ?? '',
+      gateway_url: m.details?.gateway_url ?? '',
+      bank_name: m.details?.bank_name ?? '',
       account_name: m.details?.account_name ?? '',
       account_number: m.details?.account_number ?? '',
+      account_type: m.details?.account_type ?? '',
       is_active: m.is_active,
       sort_order: m.sort_order,
     });
@@ -54,9 +93,14 @@ export default function AdminPaymentMethodsPage() {
       type: form.type as PaymentMethod['type'],
       details: {
         instructions: form.instructions,
+        logo_url: form.logo_url || undefined,
         qr_image: form.qr_image || undefined,
+        wallet_address: form.wallet_address || undefined,
+        gateway_url: form.gateway_url || undefined,
+        bank_name: form.bank_name || undefined,
         account_name: form.account_name || undefined,
         account_number: form.account_number || undefined,
+        account_type: form.account_type || undefined,
       },
       is_active: form.is_active,
       sort_order: form.sort_order,
@@ -89,15 +133,24 @@ export default function AdminPaymentMethodsPage() {
       <div className="space-y-2">
         {methods.map(m => (
           <div key={m.id} className="bg-card rounded-xl border border-border p-3 shadow-brand-sm flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary-light flex items-center justify-center flex-shrink-0">
-              <CreditCard className="w-4 h-4 text-primary" />
-            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewUrl(m.details?.logo_url || m.details?.qr_image || '')}
+              className="w-12 h-12 rounded-lg bg-primary-light flex items-center justify-center flex-shrink-0 overflow-hidden border border-primary/10"
+            >
+              {(m.details?.logo_url || m.details?.qr_image) ? (
+                <img src={m.details?.logo_url || m.details?.qr_image || ''} alt={m.name} className="w-full h-full object-cover" />
+              ) : (
+                <CreditCard className="w-4 h-4 text-primary" />
+              )}
+            </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold">{m.name}</p>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{m.is_active ? 'Active' : 'Inactive'}</span>
               </div>
-              <p className="text-xs text-muted-foreground capitalize">{m.type}</p>
+              <p className="text-[11px] text-muted-foreground">{PAYMENT_METHOD_LABELS[m.type] ?? m.type}</p>
+              <p className="text-xs text-muted-foreground capitalize">{m.details?.instructions}</p>
             </div>
             <div className="flex gap-1.5">
               <Button size="sm" variant="ghost" onClick={() => openEdit(m)} className="w-7 h-7 p-0 hover:bg-primary-light hover:text-primary"><Pencil className="w-3.5 h-3.5" /></Button>
@@ -115,23 +168,36 @@ export default function AdminPaymentMethodsPage() {
             <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
             <div>
               <Label className="text-xs">Type</Label>
-              <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v }))}>
+              <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v as PaymentMethod['type'] }))}>
                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="qrph">QRPH / GCash</SelectItem>
-                  <SelectItem value="maya">Maya</SelectItem>
-                  <SelectItem value="cod">Cash on Delivery</SelectItem>
-                  <SelectItem value="custom">Manual QR Code</SelectItem>
+                  <SelectItem value="static_qr_code">Static QR Code</SelectItem>
+                  <SelectItem value="wallet_address">Wallet Address</SelectItem>
+                  <SelectItem value="payment_gateway">Payment Gateway</SelectItem>
+                  <SelectItem value="business_deposit">Business Deposit</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div><Label className="text-xs">Instructions</Label><Textarea value={form.instructions} onChange={e => setForm(p => ({ ...p, instructions: e.target.value }))} className="mt-1 text-sm h-16 resize-none" /></div>
-            {(form.type === 'qrph' || form.type === 'custom') && (
+            <ImageUploadInput value={form.logo_url} onChange={v => setForm(p => ({ ...p, logo_url: v }))} label="Tile Logo" />
+            {form.type === 'static_qr_code' && (
               <>
                 <ImageUploadInput value={form.qr_image} onChange={v => setForm(p => ({ ...p, qr_image: v }))} label="QR Code Image" />
+              </>
+            )}
+            {form.type === 'wallet_address' && (
+              <div><Label className="text-xs">Wallet Address</Label><Input value={form.wallet_address} onChange={e => setForm(p => ({ ...p, wallet_address: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
+            )}
+            {form.type === 'payment_gateway' && (
+              <div><Label className="text-xs">Gateway URL</Label><Input value={form.gateway_url} onChange={e => setForm(p => ({ ...p, gateway_url: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
+            )}
+            {form.type === 'business_deposit' && (
+              <div className="space-y-2">
+                <div><Label className="text-xs">Bank Name</Label><Input value={form.bank_name} onChange={e => setForm(p => ({ ...p, bank_name: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
                 <div><Label className="text-xs">Account Name</Label><Input value={form.account_name} onChange={e => setForm(p => ({ ...p, account_name: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
                 <div><Label className="text-xs">Account Number</Label><Input value={form.account_number} onChange={e => setForm(p => ({ ...p, account_number: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
-              </>
+                <div><Label className="text-xs">Account Type</Label><Input value={form.account_type} onChange={e => setForm(p => ({ ...p, account_type: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
+              </div>
             )}
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Sort Order</Label><Input type="number" value={form.sort_order} onChange={e => setForm(p => ({ ...p, sort_order: parseInt(e.target.value) || 0 }))} className="mt-1 h-8 text-sm" /></div>
@@ -144,6 +210,16 @@ export default function AdminPaymentMethodsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ImagePreviewDialog
+        open={Boolean(previewUrl)}
+        onOpenChange={(open) => { if (!open) setPreviewUrl(''); }}
+        title="Payment Method Tile"
+        imageUrl={previewUrl}
+        alt="Payment method tile image"
+        showDownload
+        downloadFileName="payment-method-tile"
+      />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

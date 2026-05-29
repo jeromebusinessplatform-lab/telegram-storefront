@@ -13,6 +13,8 @@ import AddressSection from '@/components/common/AddressSection';
 import { generateOrderNumber } from '@/lib/order-number';
 import { formatShippingAddress } from '@/lib/address';
 import { validateVoucherRules } from '@/lib/voucher';
+import PaymentMethodDetailsDialog from '@/components/common/PaymentMethodDetailsDialog';
+import { getPaymentMethodTileImage, isRedirectPaymentMethod } from '@/lib/payment-method';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
 
@@ -47,6 +49,8 @@ export default function CheckoutPage() {
   const [providerQuotes, setProviderQuotes] = useState<Record<string, DeliveryQuote>>({});
   const [saveForFuture, setSaveForFuture] = useState(false);
   const [deliveryFeeMode, setDeliveryFeeMode] = useState<DeliveryFeePaymentMode>('pay_now');
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [activePaymentMethod, setActivePaymentMethod] = useState<PaymentMethod | null>(null);
   const quoteRunId = useRef(0);
 
   const [address, setAddress] = useState<ShippingAddress>({
@@ -81,7 +85,11 @@ export default function CheckoutPage() {
       setDeliveryProviders((dp ?? []) as unknown as DeliveryProvider[]);
       setFeesConfig((fc ?? []) as unknown as FeeConfig[]);
       setCheckoutConfig((cfg?.value ?? null) as CheckoutFieldsConfig | null);
-      if (pm?.length) setSelectedPayment((pm[0] as unknown) as PaymentMethod);
+      if (pm?.length) {
+        const first = (pm[0] as unknown) as PaymentMethod;
+        setSelectedPayment(first);
+        setActivePaymentMethod(first);
+      }
     };
     fetchData();
   }, []);
@@ -202,13 +210,16 @@ export default function CheckoutPage() {
   };
 
   const fees = computeFees();
-  const feesTotal = fees.reduce((s, f) => s + (f.category === 'discount' ? -f.amount : f.amount), 0);
+  const adminFeeTotal = fees.reduce((s, f) => s + (f.category === 'discount' ? 0 : f.amount), 0);
+  const adminDiscountTotal = fees.reduce((s, f) => s + (f.category === 'discount' ? f.amount : 0), 0);
   const voucherDiscount = appliedVoucher
     ? appliedVoucher.discount_type === 'percent'
       ? (subtotal * appliedVoucher.discount_value) / 100
       : appliedVoucher.discount_value
     : 0;
-  const total = Math.max(0, subtotal + feesTotal + (deliveryFeeMode === 'pay_now' ? deliveryFee : 0) - voucherDiscount);
+  const deliveryFeeToPay = deliveryFeeMode === 'pay_now' ? deliveryFee : 0;
+  const discountsTotal = adminDiscountTotal + voucherDiscount;
+  const total = Math.max(0, subtotal + adminFeeTotal + deliveryFeeToPay - discountsTotal);
 
   const placeOrder = async () => {
     if (!customer) { toast({ description: 'Please login via Telegram first', variant: 'destructive' }); return; }
@@ -291,6 +302,51 @@ export default function CheckoutPage() {
 
       if (error || !order) throw error ?? new Error('Order creation failed');
 
+      const submittedMessage = [
+        '<b>Order Submitted</b>',
+        `<b>Order #:</b> ${order.order_number}`,
+        `<b>Subtotal:</b> ₱${subtotal.toFixed(2)}`,
+        `<b>Fees:</b> ₱${(adminFeeTotal + deliveryFeeToPay).toFixed(2)}`,
+        `<b>Discounts:</b> ₱${discountsTotal.toFixed(2)}`,
+        `<b>Grand Total:</b> ₱${total.toFixed(2)}`,
+        deliveryFeeMode === 'upon_fulfillment'
+          ? `<b>Delivery Fee:</b> ₱${deliveryFee.toFixed(2)} (upon fulfillment)`
+          : deliveryFee > 0
+            ? `<b>Delivery Fee:</b> ₱${deliveryFee.toFixed(2)} (paid now)`
+            : '<b>Delivery Fee:</b> FREE',
+        '',
+        'Your order has been received by the store.',
+      ].join('\n');
+
+      await supabase.from('notifications').insert({
+        customer_id: customer.id,
+        title: 'Order Submitted',
+        message: `Your order #${order.order_number} has been received.`,
+        type: 'order',
+      });
+
+      try {
+        await supabase.functions.invoke('send-telegram-notification', {
+          body: {
+            telegram_id: customer.telegram_id,
+            message: submittedMessage,
+            notification_data: {
+              type: 'order',
+              order_id: order.id,
+              order_number: order.order_number,
+            },
+            reply_markup: {
+              inline_keyboard: [[{
+                text: 'View Order',
+                web_app: { url: `${window.location.origin}/orders/${order.id}` },
+              }]],
+            },
+          },
+        });
+      } catch (telegramError) {
+        console.warn('Telegram order notification failed:', telegramError);
+      }
+
       if (appliedVoucher) {
         await supabase.from('vouchers').update({ used_count: appliedVoucher.used_count + 1 }).eq('id', appliedVoucher.id);
         await supabase.from('voucher_audit_logs').insert({
@@ -329,25 +385,15 @@ export default function CheckoutPage() {
         await supabase.from('customers').update({ saved_addresses: nextSaved }).eq('id', customer.id);
       }
 
-      if (selectedPayment.type === 'maya') {
-        const { data: mayaData } = await supabase.functions.invoke('maya-checkout', {
-          body: {
-            order_id: order.id,
-            amount: total,
-            description: `Order ${order.order_number}`,
-            success_url: `${window.location.origin}/orders/${order.id}?success=true`,
-            cancel_url: `${window.location.origin}/orders/${order.id}`,
-          },
-        });
-        if (mayaData?.checkout_url) {
-          clearCart();
-          window.location.href = mayaData.checkout_url;
-          return;
-        }
+      if (isRedirectPaymentMethod(selectedPayment) && selectedPayment.details?.gateway_url) {
+        clearCart();
+        window.open(selectedPayment.details.gateway_url, '_blank', 'noopener,noreferrer');
+        navigate(`/orders/${order.id}`, { replace: true, state: { justSubmitted: true } });
+        return;
       }
 
       clearCart();
-      navigate(`/orders/${order.id}`, { replace: true });
+      navigate(`/orders/${order.id}`, { replace: true, state: { justSubmitted: true } });
     } catch (err) {
       console.error('Order error:', err);
       toast({ description: 'Failed to place order. Please try again.', variant: 'destructive' });
@@ -667,19 +713,79 @@ export default function CheckoutPage() {
             <CreditCard className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">Step 4 | Payment Method</h2>
           </div>
-          <div className="space-y-2">
+          <div className="rounded-xl border border-border bg-background p-3 mb-3 space-y-1.5">
+            <h3 className="text-xs font-bold text-foreground mb-1">Final Recap</h3>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-semibold">₱{subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Fees</span>
+              <span className="font-semibold">
+                ₱{(adminFeeTotal + deliveryFeeToPay).toFixed(2)}
+                {deliveryFeeMode === 'upon_fulfillment' && deliveryFee > 0 ? ' (delivery due later)' : ''}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Discounts</span>
+              <span className="font-semibold text-green-600">-₱{discountsTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-border">
+              <span className="text-sm font-bold">Grand Total</span>
+              <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-amber-300 bg-amber-50/80 dark:bg-amber-950/20 p-3 mb-3">
+            <p className="text-[11px] font-black text-amber-800 dark:text-amber-300 text-center tracking-[0.18em] uppercase">
+              Payment Proof Upload Reminder
+            </p>
+            <p className="text-[11px] text-amber-700 dark:text-amber-200 text-center mt-1 leading-snug">
+              Please prepare your payment proof after paying so you can upload it for verification.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             {paymentMethods.map(pm => (
-              <label key={pm.id} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${selectedPayment?.id === pm.id ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'}`}>
-                <input type="radio" name="payment" className="accent-primary w-3.5 h-3.5" checked={selectedPayment?.id === pm.id} onChange={() => setSelectedPayment(pm)} />
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-foreground">{pm.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{pm.details?.instructions}</p>
+              <button
+                key={pm.id}
+                type="button"
+                aria-label={pm.name}
+                title={pm.name}
+                onClick={() => {
+                  setSelectedPayment(pm);
+                  setActivePaymentMethod(pm);
+                  setShowPaymentDetails(true);
+                }}
+                className={`group aspect-square rounded-xl border p-2 transition-all ${
+                  selectedPayment?.id === pm.id
+                    ? 'border-primary bg-primary-light ring-2 ring-primary/20'
+                    : 'border-border hover:border-primary/40 hover:bg-primary-light/50'
+                }`}
+              >
+                <div className="h-full w-full rounded-lg bg-background flex items-center justify-center overflow-hidden">
+                  {getPaymentMethodTileImage(pm) ? (
+                    <img
+                      src={getPaymentMethodTileImage(pm)}
+                      alt={pm.name}
+                      className="h-full w-full object-contain p-1.5"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-muted">
+                      <CreditCard className={`w-5 h-5 ${selectedPayment?.id === pm.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                    </div>
+                  )}
                 </div>
-              </label>
+              </button>
             ))}
           </div>
         </div>
       </div>
+
+      <PaymentMethodDetailsDialog
+        open={showPaymentDetails}
+        onOpenChange={setShowPaymentDetails}
+        method={activePaymentMethod}
+      />
 
       <div className="sticky bottom-0 p-3 border-t border-border bg-background shadow-brand-lg">
         <Button onClick={placeOrder} disabled={isPlacing || isCalculatingFee} className="w-full h-12 btn-gradient text-sm font-bold rounded-xl gap-2">

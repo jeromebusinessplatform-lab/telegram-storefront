@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { telegram_id, message, notification_data } = await req.json();
+    const { telegram_id, message, notification_data, reply_markup } = await req.json();
 
     const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
     if (!BOT_TOKEN) {
@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
         chat_id: telegram_id,
         text: message,
         parse_mode: "HTML",
+        ...(reply_markup ? { reply_markup } : {}),
       }),
     });
 

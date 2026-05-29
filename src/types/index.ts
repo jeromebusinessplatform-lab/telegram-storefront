@@ -134,15 +134,20 @@ export interface CartItem {
 // ─── Payment Method ───────────────────────────────────────────────────────────
 export interface PaymentMethodDetails {
   instructions?: string;
+  logo_url?: string;
   qr_image?: string;
+  wallet_address?: string;
+  gateway_url?: string;
+  bank_name?: string;
   account_name?: string;
   account_number?: string;
+  account_type?: string;
 }
 
 export interface PaymentMethod {
   id: string;
   name: string;
-  type: 'qrph' | 'maya' | 'cod' | 'custom';
+  type: 'static_qr_code' | 'wallet_address' | 'payment_gateway' | 'business_deposit' | 'qrph' | 'maya' | 'cod' | 'custom';
   details: PaymentMethodDetails;
   is_active: boolean;
   sort_order: number;
