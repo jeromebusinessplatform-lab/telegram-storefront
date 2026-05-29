@@ -54,10 +54,8 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
           Back
         </button>
       ) : (
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center">
-            <span className="text-white text-xs font-black">PC</span>
-          </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-7 w-auto object-contain" />
           <span className="section-font text-base text-foreground">{title ?? storeName}</span>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import {
@@ -29,8 +29,33 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAdmin();
+  const { logout, isAdmin } = useAdmin();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const timeLabel = useMemo(() => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const month = pad(now.getMonth() + 1);
+    const day = pad(now.getDate());
+    const year = String(now.getFullYear());
+    let hours = now.getHours();
+    const minutes = pad(now.getMinutes());
+    const seconds = pad(now.getSeconds());
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    const time = `${pad(hours)}:${minutes}:${seconds} ${period}`;
+    return `${month}${day}${year} | ${time}`;
+  }, [now]);
+
+  const storeStatus = useMemo(() => (isAdmin ? 'STORE IS OPEN' : ''), [isAdmin]);
 
   const handleLogout = () => {
     logout();
@@ -107,21 +132,30 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <header className="flex items-center gap-3 px-4 py-3 bg-background border-b border-border flex-shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-1.5 rounded-md hover:bg-muted"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <h1 className="section-font text-lg text-foreground">{title}</h1>
-          <div className="ml-auto flex items-center gap-2">
+        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-2 bg-background border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <button
-              onClick={() => navigate('/')}
-              className="text-xs text-primary font-semibold hover:underline"
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-md hover:bg-muted"
             >
-              View Store
+              <Menu className="w-5 h-5" />
             </button>
+            <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-9 w-auto object-contain" />
+          </div>
+
+          <h1 className="section-font text-base md:text-lg text-foreground text-center whitespace-nowrap">
+            {title}
+          </h1>
+
+          <div className="flex flex-col items-end justify-center text-right leading-none min-w-0">
+            <div className="text-[10px] md:text-[11px] font-semibold text-foreground tabular-nums whitespace-nowrap">
+              {timeLabel}
+            </div>
+            {storeStatus && (
+              <div className="mt-1 text-[10px] md:text-[11px] font-black tracking-wide text-emerald-500 whitespace-nowrap">
+                {storeStatus}
+              </div>
+            )}
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4">
