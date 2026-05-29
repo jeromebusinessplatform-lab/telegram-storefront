@@ -238,6 +238,12 @@ importers:
         specifier: ^7.1.4
         version: 7.3.3(@types/node@24.12.4)(jiti@1.21.7)(lightningcss@1.32.0)
 
+  bot:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.57.4
+        version: 2.106.2
+
 packages:
 
   '@alloc/quick-lru@5.2.0':
