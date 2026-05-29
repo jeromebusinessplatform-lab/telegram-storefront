@@ -366,6 +366,50 @@ export interface AnnouncementConfig {
   visual_style?: 'clean' | 'soft' | 'bold' | 'outlined';
 }
 
+export type PageBuilderBlockType = 'hero' | 'text' | 'image' | 'button' | 'spacer';
+export type PageBuilderFontFamily = 'body' | 'condensed' | 'serif' | 'mono';
+export type PageBuilderTextAlign = 'left' | 'center' | 'right';
+export type PageBuilderImageFit = 'cover' | 'contain';
+
+export interface PageBuilderBlockStyle {
+  font_family: PageBuilderFontFamily;
+  font_style: 'normal' | 'italic';
+  text_color: string;
+  accent_color: string;
+  background_color: string;
+  alignment: PageBuilderTextAlign;
+  image_fit: PageBuilderImageFit;
+  image_position_x: number;
+  image_position_y: number;
+  image_zoom: number;
+  border_radius: number;
+}
+
+export interface PageBuilderBlock {
+  id: string;
+  type: PageBuilderBlockType;
+  enabled: boolean;
+  title: string;
+  body_markdown: string;
+  image_url: string;
+  image_alt: string;
+  button_label: string;
+  button_href: string;
+  sort_order: number;
+  style: PageBuilderBlockStyle;
+}
+
+export interface PageBuilderPage {
+  slug: string;
+  label: string;
+  blocks: PageBuilderBlock[];
+}
+
+export interface PageBuilderConfig {
+  enabled: boolean;
+  pages: PageBuilderPage[];
+}
+
 export interface CheckoutFieldsConfig {
   show_phone: boolean;
   show_email: boolean;

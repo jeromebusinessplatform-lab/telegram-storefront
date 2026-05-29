@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, CreditCard, Truck,
-  DollarSign, Settings, MessageCircle, Bell, LogOut, Menu, X, ChevronRight
+  DollarSign, Settings, MessageCircle, Bell, LogOut, Menu, X, ChevronRight, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { icon: DollarSign, label: 'Fees & Charges', path: '/admin/fees' },
   { icon: MessageCircle, label: 'Support', path: '/admin/support' },
   { icon: Bell, label: 'Notifications', path: '/admin/notifications' },
+  { icon: LayoutGrid, label: 'Page Builder', path: '/admin/builder' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 

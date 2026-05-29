@@ -15,6 +15,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const TicketDetailPage = lazy(() => import("./pages/TicketDetailPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const BuilderPage = lazy(() => import("./pages/BuilderPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MobileAuthPage = lazy(() => import("./pages/MobileAuthPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
@@ -33,6 +34,7 @@ const AdminFeesPage = lazy(() => import("./pages/admin/AdminFeesPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
 const AdminSupportPage = lazy(() => import("./pages/admin/AdminSupportPage"));
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
+const AdminPageBuilderPage = lazy(() => import("./pages/admin/AdminPageBuilderPage"));
 
 export const routers = [
   // Customer routes
@@ -46,6 +48,7 @@ export const routers = [
   { path: "/support", name: "support", element: <SupportPage /> },
   { path: "/support/:ticketId", name: "ticket-detail", element: <TicketDetailPage /> },
   { path: "/notifications", name: "notifications", element: <NotificationsPage /> },
+  { path: "/page/:slug", name: "builder-page", element: <BuilderPage /> },
   { path: "/mobile-auth", name: "mobile-auth", element: <MobileAuthPage /> },
   { path: "/auth/callback", name: "auth-callback", element: <AuthCallbackPage /> },
 
@@ -64,6 +67,7 @@ export const routers = [
   { path: "/admin/settings", name: "admin-settings", element: <AdminGuard><AdminSettingsPage /></AdminGuard> },
   { path: "/admin/support", name: "admin-support", element: <AdminGuard><AdminSupportPage /></AdminGuard> },
   { path: "/admin/notifications", name: "admin-notifications", element: <AdminGuard><AdminNotificationsPage /></AdminGuard> },
+  { path: "/admin/builder", name: "admin-builder", element: <AdminGuard><AdminPageBuilderPage /></AdminGuard> },
 
   { path: "*", name: "404", element: <NotFound /> },
 ];

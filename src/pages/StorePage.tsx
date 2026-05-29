@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import type { AnnouncementConfig, Category, Product } from '@/types';
+import PageBuilderViewport from '@/components/page-builder/PageBuilderViewport';
 
 type ProductRow = Product & {
   categories?: {
@@ -125,6 +126,8 @@ export default function StorePage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-4">
+        <PageBuilderViewport pageSlug="store" />
+
         {visibleAnnouncement && (
           <section className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Announcement</p>
