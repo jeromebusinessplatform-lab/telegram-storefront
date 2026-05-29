@@ -1,5 +1,5 @@
 create table if not exists support_staff (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   role text not null default 'Support Agent',
   telegram_username text,

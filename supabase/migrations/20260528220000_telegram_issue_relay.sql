@@ -1,6 +1,6 @@
 -- Telegram order issue relay threads
 create table if not exists telegram_issue_threads (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   order_id uuid not null references orders(id) on delete cascade,
   customer_id uuid not null references customers(id) on delete cascade,
   customer_telegram_id text not null,
@@ -12,7 +12,7 @@ create table if not exists telegram_issue_threads (
 create unique index if not exists telegram_issue_threads_order_id_idx on telegram_issue_threads(order_id);
 
 create table if not exists telegram_message_routes (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   thread_id uuid not null references telegram_issue_threads(id) on delete cascade,
   order_id uuid not null references orders(id) on delete cascade,
   customer_telegram_id text not null,

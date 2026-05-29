@@ -1,10 +1,10 @@
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable UUID generation
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Customers table
 CREATE TABLE IF NOT EXISTS customers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   telegram_id TEXT UNIQUE NOT NULL,
   telegram_username TEXT,
   telegram_first_name TEXT,
@@ -26,7 +26,7 @@ CREATE POLICY "customers_update_own" ON customers FOR UPDATE USING (true);
 
 -- Categories
 CREATE TABLE IF NOT EXISTS categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -40,7 +40,7 @@ CREATE POLICY "categories_delete_all" ON categories FOR DELETE USING (true);
 
 -- Products
 CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
   price NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -62,7 +62,7 @@ CREATE POLICY "products_delete_all" ON products FOR DELETE USING (true);
 
 -- Payment methods
 CREATE TABLE IF NOT EXISTS payment_methods (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   type TEXT NOT NULL DEFAULT 'custom',
   details JSONB DEFAULT '{}',
@@ -79,7 +79,7 @@ CREATE POLICY "payment_methods_delete_all" ON payment_methods FOR DELETE USING (
 
 -- Delivery providers
 CREATE TABLE IF NOT EXISTS delivery_providers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   type TEXT NOT NULL DEFAULT 'manual',
   config JSONB DEFAULT '{}',
@@ -95,7 +95,7 @@ CREATE POLICY "delivery_providers_delete_all" ON delivery_providers FOR DELETE U
 
 -- Fees config
 CREATE TABLE IF NOT EXISTS fees_config (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'charge',
   value_type TEXT NOT NULL DEFAULT 'fixed',
@@ -113,7 +113,7 @@ CREATE POLICY "fees_config_delete_all" ON fees_config FOR DELETE USING (true);
 
 -- Vouchers
 CREATE TABLE IF NOT EXISTS vouchers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code TEXT UNIQUE NOT NULL,
   discount_type TEXT NOT NULL DEFAULT 'fixed',
   discount_value NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -135,7 +135,7 @@ CREATE POLICY "vouchers_delete_all" ON vouchers FOR DELETE USING (true);
 
 -- Orders
 CREATE TABLE IF NOT EXISTS orders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_number TEXT UNIQUE NOT NULL,
   customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   items JSONB NOT NULL DEFAULT '[]',
@@ -165,7 +165,7 @@ CREATE POLICY "orders_delete_all" ON orders FOR DELETE USING (true);
 
 -- Support tickets
 CREATE TABLE IF NOT EXISTS support_tickets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_number TEXT UNIQUE NOT NULL,
   customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   subject TEXT NOT NULL,
@@ -183,7 +183,7 @@ CREATE POLICY "support_tickets_delete_all" ON support_tickets FOR DELETE USING (
 
 -- Support messages
 CREATE TABLE IF NOT EXISTS support_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
   sender_type TEXT NOT NULL DEFAULT 'customer',
   message TEXT NOT NULL,
@@ -199,7 +199,7 @@ CREATE POLICY "support_messages_delete_all" ON support_messages FOR DELETE USING
 
 -- Notifications
 CREATE TABLE IF NOT EXISTS notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -216,7 +216,7 @@ CREATE POLICY "notifications_delete_all" ON notifications FOR DELETE USING (true
 
 -- App settings
 CREATE TABLE IF NOT EXISTS app_settings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   key TEXT UNIQUE NOT NULL,
   value JSONB NOT NULL DEFAULT '{}',
   updated_at TIMESTAMPTZ DEFAULT NOW()
