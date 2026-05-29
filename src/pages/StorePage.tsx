@@ -1,43 +1,49 @@
-import { useState, useEffect } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import ProductGrid from '@/components/products/ProductGrid';
-import AnnouncementBanner from '@/components/products/AnnouncementBanner';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, Category, AnnouncementConfig } from '@/types';
-import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import type { AnnouncementConfig, Category, Product } from '@/types';
+
+type ProductRow = Product & {
+  categories?: {
+    name?: string | null;
+  } | null;
+};
 
 export default function StorePage() {
   const { customer } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { addItem, totalItems } = useCart();
+  const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [announcement, setAnnouncement] = useState<AnnouncementConfig | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const showAnnouncementBanner = Boolean(announcement && (announcement.enabled || announcement.auto_publish));
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const loadCategories = async () => {
       const { data } = await supabase.from('categories').select('*').order('sort_order');
-      setCategories(data as Category[] ?? []);
+      setCategories((data as Category[] | null) ?? []);
     };
-    fetchCategories();
+    void loadCategories();
   }, []);
 
   useEffect(() => {
-    const fetchAnnouncement = async () => {
-      const { data } = await supabase.from('app_settings').select('value').eq('key', 'announcement_config').maybeSingle();
+    const loadAnnouncement = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'announcement_config')
+        .maybeSingle();
       if (data?.value) {
         setAnnouncement(data.value as AnnouncementConfig);
       }
     };
-    fetchAnnouncement();
+    void loadAnnouncement();
   }, []);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const loadProducts = async () => {
       setIsLoading(true);
       let query = supabase
         .from('products')
@@ -49,83 +55,182 @@ export default function StorePage() {
       if (activeCategory !== 'all') {
         query = query.eq('category_id', activeCategory);
       }
+
       if (search.trim()) {
         query = query.ilike('name', `%${search.trim()}%`);
       }
 
       const { data } = await query;
-      setProducts((data as unknown as Product[]) ?? []);
+      setProducts((data as ProductRow[] | null) ?? []);
       setIsLoading(false);
     };
-    fetchProducts();
+    void loadProducts();
   }, [activeCategory, search]);
 
-  return (
-    <AppLayout>
-      <div className="pb-2">
-        {showAnnouncementBanner && <AnnouncementBanner announcement={announcement!} fixed />}
+  const visibleAnnouncement = useMemo(() => {
+    if (!announcement) return null;
+    const publishAt = announcement.publish_at ? new Date(announcement.publish_at).getTime() : null;
+    const takedownAt = announcement.takedown_at ? new Date(announcement.takedown_at).getTime() : null;
+    const now = Date.now();
+    const scheduledVisible =
+      (!announcement.auto_publish || !publishAt || now >= publishAt) &&
+      (!announcement.auto_takedown || !takedownAt || now <= takedownAt);
+    const manualVisible = Boolean(announcement.enabled);
+    return (manualVisible || Boolean(announcement.auto_publish)) && scheduledVisible
+      ? announcement
+      : null;
+  }, [announcement]);
 
-        {/* Welcome banner */}
-        {customer && (
-          <div className="px-3 pt-3 pb-0">
-            <div className="bg-gradient-card rounded-xl p-3 border border-primary/10">
-              <p className="text-xs text-muted-foreground">Welcome back,</p>
-              <p className="font-bold text-sm text-foreground">{customer.telegram_first_name ?? 'Customer'} 👋</p>
+  const addProduct = (product: ProductRow) => {
+    const image = product.images?.[0] ?? '/placeholder.svg';
+    addItem({
+      product_id: product.id,
+      product_name: product.name,
+      sub_name: product.sub_name,
+      product_image: image,
+      price: product.price,
+      quantity: 1,
+    });
+  };
+
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-black text-primary-foreground">
+            PC
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-black tracking-wide">PRIME CORE STORE</div>
+            <div className="text-[11px] text-muted-foreground">
+              {customer ? `Welcome back, ${customer.telegram_first_name ?? 'Customer'}` : 'Telegram Mini App storefront'}
             </div>
           </div>
+          <a
+            href="/cart"
+            className="inline-flex items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold"
+          >
+            Cart {totalItems > 0 ? `(${totalItems})` : ''}
+          </a>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-4">
+        {visibleAnnouncement && (
+          <section className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Announcement</p>
+            {visibleAnnouncement.title && <h1 className="mt-1 text-lg font-black">{visibleAnnouncement.title}</h1>}
+            {visibleAnnouncement.body_markdown && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                {visibleAnnouncement.body_markdown}
+              </p>
+            )}
+          </section>
         )}
 
-        {/* Search */}
-        <div className="px-3 py-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-9 h-9 text-sm bg-muted/50 border-border focus:border-primary"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <X className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-            )}
+        <section className="mb-4 rounded-2xl border border-border bg-card p-4">
+          <div className="grid gap-3 md:grid-cols-[1.5fr_1fr] md:items-center">
+            <div>
+              <h2 className="text-xl font-black">Shop now</h2>
+              <p className="text-sm text-muted-foreground">
+                Browse products, add items to cart, and continue checkout from Telegram.
+              </p>
+            </div>
+            <label className="grid gap-1 text-sm font-semibold">
+              Search products
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Type a product name"
+                className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none"
+              />
+            </label>
           </div>
-        </div>
 
-        {/* Category tabs */}
-        <div className="flex gap-2 px-3 pb-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-              activeCategory === 'all'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-primary/10'
-            }`}
-          >
-            All
-          </button>
-          {categories.filter(c => c.name !== 'All').map(cat => (
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-                activeCategory === cat.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-primary/10'
+              type="button"
+              onClick={() => setActiveCategory('all')}
+              className={`rounded-full px-4 py-2 text-xs font-bold ${
+                activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {cat.name}
+              All
             </button>
-          ))}
-        </div>
+            {categories
+              .filter((category) => category.name !== 'All')
+              .map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setActiveCategory(category.id)}
+                  className={`rounded-full px-4 py-2 text-xs font-bold ${
+                    activeCategory === category.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
+          </div>
+        </section>
 
-        {/* Product grid */}
-        <ProductGrid products={products} isLoading={isLoading} />
-      </div>
-    </AppLayout>
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="h-56 animate-pulse rounded-2xl border border-border bg-card" />
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+            <p className="text-base font-bold">No products available</p>
+            <p className="mt-1 text-sm text-muted-foreground">Try a different category or search term.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {products.map((product) => {
+              const image = product.images?.[0] ?? '/placeholder.svg';
+              return (
+                <article key={product.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                  <a href={`/product/${product.id}`} className="block">
+                    <div className="aspect-square bg-muted">
+                      <img
+                        src={image}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                        onError={(event) => {
+                          (event.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                  </a>
+                  <div className="space-y-2 p-3">
+                    <div>
+                      <a href={`/product/${product.id}`} className="block text-sm font-bold leading-tight">
+                        {product.name}
+                      </a>
+                      {product.sub_name && <p className="text-[11px] text-muted-foreground">{product.sub_name}</p>}
+                      {product.categories?.name && (
+                        <p className="text-[11px] text-muted-foreground">{product.categories.name}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-black text-primary">₱{product.price.toFixed(2)}</span>
+                      <button
+                        type="button"
+                        onClick={() => addProduct(product)}
+                        disabled={product.stock === 0}
+                        className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {product.stock === 0 ? 'Sold out' : 'Add'}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
