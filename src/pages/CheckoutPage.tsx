@@ -847,9 +847,6 @@ export default function CheckoutPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               You will be redirected to a secure payment gateway. Your payment is validated in real time, so there is no need to send a screenshot.
             </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              For QRPh or Maya payments made through this gateway, the QRPh Invoice No. and reference numbers will be captured automatically after payment.
-            </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"

@@ -37,12 +37,49 @@ type TelegramAuthResponse = {
   telegram_user: TelegramUser;
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInTelegram, setIsInTelegram] = useState(false);
-  const { tg, isInTelegram: isTelegramLaunch, user: launchUser, startParam, initData } = useTelegram();
+  const { tg, isInTelegram: isTelegramLaunch, startParam } = useTelegram();
+
+  const resolveTelegramLaunchData = useCallback(
+    async (timeoutMs = 2000) => {
+      if (!tg) {
+        return { user: null as TelegramUser | null, initData: null as string | null, startParam: null as string | null };
+      }
+
+      tg.ready();
+      tg.expand();
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < timeoutMs) {
+        const currentUser = tg.initDataUnsafe?.user ?? null;
+        const currentInitData = tg.initData ?? null;
+        if (currentUser && currentInitData) {
+          return {
+            user: currentUser,
+            initData: currentInitData,
+            startParam: tg.initDataUnsafe?.start_param ?? null,
+          };
+        }
+
+        await sleep(100);
+      }
+
+      return {
+        user: tg.initDataUnsafe?.user ?? null,
+        initData: tg.initData ?? null,
+        startParam: tg.initDataUnsafe?.start_param ?? null,
+      };
+    },
+    [tg],
+  );
 
   const init = useCallback(async () => {
     setIsLoading(true);
@@ -55,24 +92,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const urlParams = new URLSearchParams(window.location.search);
       const refCode = urlParams.get('ref') ?? startParam ?? undefined;
 
-      if (isTelegramLaunch && launchUser && initData) {
-        const { data, error } = await supabase.functions.invoke<TelegramAuthResponse>('telegram-auth', {
-          body: {
-            init_data: initData,
-            ref_code: refCode,
-          },
-        });
+      if (isTelegramLaunch || tg) {
+        const telegramLaunch = await resolveTelegramLaunchData();
 
-        if (error || !data?.access_token || !data.customer) {
+        if (telegramLaunch.user && telegramLaunch.initData) {
+          const existingToken = getAccessToken();
+          if (existingToken) {
+            const payload = decodeJwtPayload(existingToken);
+            const storedTelegramId = typeof payload?.telegram_id === 'string' ? String(payload.telegram_id) : null;
+            if (storedTelegramId && storedTelegramId !== String(telegramLaunch.user.id)) {
+              clearAccessToken();
+            }
+          }
+
+          const { data, error } = await supabase.functions.invoke<TelegramAuthResponse>('telegram-auth', {
+            body: {
+              init_data: telegramLaunch.initData,
+              ref_code: refCode ?? telegramLaunch.startParam ?? undefined,
+            },
+          });
+
+          if (error || !data?.access_token || !data.customer) {
+            console.error('Telegram auth failed:', error ?? new Error('Missing auth response'));
+            return;
+          }
+
+          setAccessToken(data.access_token);
+
+          setCustomer(data.customer);
+          setTelegramUser(data.telegram_user);
+          setIsInTelegram(true);
           return;
         }
-
-        setAccessToken(data.access_token);
-
-        setCustomer(data.customer);
-        setTelegramUser(data.telegram_user);
-        setIsInTelegram(true);
-        return;
       }
 
       const existingToken = getAccessToken();
@@ -105,10 +156,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         last_name: data.telegram_last_name ?? undefined,
         username: data.telegram_username ?? undefined,
       });
+      setIsInTelegram(Boolean(tg));
     } finally {
       setIsLoading(false);
     }
-  }, [initData, launchUser, startParam, tg, isTelegramLaunch]);
+  }, [resolveTelegramLaunchData, startParam, tg, isTelegramLaunch]);
 
   useEffect(() => {
     init();
