@@ -42,9 +42,9 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const timeLabel = useMemo(() => {
     const pad = (value: number) => String(value).padStart(2, '0');
-    const month = pad(now.getMonth() + 1);
     const day = pad(now.getDate());
     const year = String(now.getFullYear());
+    const month = now.toLocaleString('en-US', { month: 'long' });
     let hours = now.getHours();
     const minutes = pad(now.getMinutes());
     const seconds = pad(now.getSeconds());
@@ -52,7 +52,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     hours = hours % 12;
     if (hours === 0) hours = 12;
     const time = `${pad(hours)}:${minutes}:${seconds} ${period}`;
-    return `${month}${day}${year} | ${time}`;
+    return `${month} ${day}, ${year} | ${time}`;
   }, [now]);
 
   const storeStatus = useMemo(() => (isAdmin ? 'STORE IS OPEN' : ''), [isAdmin]);

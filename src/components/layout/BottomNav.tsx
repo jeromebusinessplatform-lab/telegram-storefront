@@ -42,7 +42,7 @@ export default function BottomNav() {
                 </span>
               )}
             </div>
-            <span className={`text-[10px] font-semibold ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+            <span className={`text-[8px] font-semibold ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
               {label}
             </span>
             {isActive && (

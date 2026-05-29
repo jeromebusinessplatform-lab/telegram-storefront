@@ -46,7 +46,7 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
       {showBack ? (
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-primary font-semibold text-sm"
+          className="flex items-center gap-1.5 text-primary font-semibold text-[8px]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -56,7 +56,7 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
       ) : (
         <div className="flex items-center gap-2 min-w-0">
           <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-7 w-auto object-contain" />
-          <span className="section-font text-base text-foreground">{title ?? storeName}</span>
+          <span className="section-font text-[8px] text-foreground">{title ?? storeName}</span>
         </div>
       )}
 
