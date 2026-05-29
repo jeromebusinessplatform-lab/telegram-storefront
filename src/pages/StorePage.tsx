@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -11,7 +13,8 @@ type ProductRow = Product & {
 };
 
 export default function StorePage() {
-  const { customer } = useAuth();
+  const navigate = useNavigate();
+  const { customer, isLoading: isAuthLoading } = useAuth();
   const { addItem, totalItems } = useCart();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -66,6 +69,12 @@ export default function StorePage() {
     };
     void loadProducts();
   }, [activeCategory, search]);
+
+  useEffect(() => {
+    if (!isAuthLoading && Capacitor.isNativePlatform() && !customer) {
+      navigate('/mobile-auth', { replace: true });
+    }
+  }, [customer, isAuthLoading, navigate]);
 
   const visibleAnnouncement = useMemo(() => {
     if (!announcement) return null;

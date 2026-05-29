@@ -114,6 +114,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     init();
   }, [init]);
 
+  useEffect(() => {
+    const handleTokenChange = () => {
+      void init();
+    };
+
+    window.addEventListener('pc:access-token-changed', handleTokenChange as EventListener);
+    return () => window.removeEventListener('pc:access-token-changed', handleTokenChange as EventListener);
+  }, [init]);
+
   const refetchCustomer = useCallback(async () => {
     if (!customer?.id) return;
     const { data } = await supabase

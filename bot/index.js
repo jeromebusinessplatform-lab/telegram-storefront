@@ -63,6 +63,43 @@ async function sendMiniAppLaunch(chatId) {
   });
 }
 
+async function saveMobileAuthSession(message, nonce) {
+  const user = message.from;
+  if (!user) return;
+
+  await supabase.from('mobile_auth_sessions').upsert({
+    nonce,
+    telegram_id: String(user.id),
+    telegram_username: user.username ?? null,
+    telegram_first_name: user.first_name ?? null,
+    telegram_last_name: user.last_name ?? null,
+    start_param: nonce,
+    consumed_at: null,
+    expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function sendMobileAuthReturn(chatId, nonce) {
+  const webCallbackUrl = `${WEBAPP_URL.replace(/\/$/, '')}/auth/callback?nonce=${encodeURIComponent(nonce)}`;
+  const nativeCallbackUrl = `primecore://auth/callback?nonce=${encodeURIComponent(nonce)}`;
+
+  await telegramApi('sendMessage', {
+    chat_id: chatId,
+    text: 'Telegram authentication captured. Return to the app to finish login.',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: 'Open App', url: nativeCallbackUrl },
+        ],
+        [
+          { text: 'Open Web Fallback', url: webCallbackUrl },
+        ],
+      ],
+    },
+  });
+}
+
 async function getOpenThreadByCustomer(chatId) {
   const { data } = await supabase
     .from('telegram_issue_threads')
@@ -163,6 +200,16 @@ async function handleUpdate(update) {
   const text = message.text ?? '';
 
   if (text.startsWith('/start')) {
+    const payload = text.split(' ').slice(1).join(' ').trim();
+    if (payload.startsWith('apk_')) {
+      const nonce = payload.slice(4).trim();
+      if (nonce) {
+        await saveMobileAuthSession(message, nonce);
+        await sendMobileAuthReturn(chatId, nonce);
+      }
+      return;
+    }
+
     await sendMiniAppLaunch(chatId);
     return;
   }

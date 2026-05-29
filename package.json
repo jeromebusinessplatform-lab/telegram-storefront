@@ -10,9 +10,18 @@
     "build:prod": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "pInstall": "pnpm install"
+    "pInstall": "pnpm install",
+    "cap:init": "cap init \"PRIME Core Store\" ph.primecore.store --web-dir=dist",
+    "cap:add:android": "cap add android",
+    "cap:sync:android": "pnpm build && cap sync android",
+    "cap:open:android": "cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/preferences": "^8.0.1",
     "@enter-pro/analytics-sdk": "^0.0.10",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -73,6 +82,7 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/plugin-transform-react-jsx": "^7.27.1",
+    "@capacitor/cli": "^8.3.4",
     "@eslint/js": "^9.34.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@tailwindcss/typography": "^0.5.16",

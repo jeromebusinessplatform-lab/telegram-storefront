@@ -16,6 +16,8 @@ const SupportPage = lazy(() => import("./pages/SupportPage"));
 const TicketDetailPage = lazy(() => import("./pages/TicketDetailPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const MobileAuthPage = lazy(() => import("./pages/MobileAuthPage"));
+const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -44,6 +46,8 @@ export const routers = [
   { path: "/support", name: "support", element: <SupportPage /> },
   { path: "/support/:ticketId", name: "ticket-detail", element: <TicketDetailPage /> },
   { path: "/notifications", name: "notifications", element: <NotificationsPage /> },
+  { path: "/mobile-auth", name: "mobile-auth", element: <MobileAuthPage /> },
+  { path: "/auth/callback", name: "auth-callback", element: <AuthCallbackPage /> },
 
   // Admin routes
   { path: "/admin", name: "admin-login", element: <AdminLoginPage /> },
