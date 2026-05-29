@@ -24,6 +24,7 @@ type PaymentMethodForm = {
   qr_image: string;
   wallet_address: string;
   gateway_url: string;
+  gateway_channel: NonNullable<PaymentMethod['details']['gateway_channel']>;
   bank_name: string;
   account_name: string;
   account_number: string;
@@ -40,6 +41,7 @@ const EMPTY: PaymentMethodForm = {
   qr_image: '',
   wallet_address: '',
   gateway_url: '',
+  gateway_channel: 'all',
   bank_name: '',
   account_name: '',
   account_number: '',
@@ -75,6 +77,7 @@ export default function AdminPaymentMethodsPage() {
       qr_image: m.details?.qr_image ?? '',
       wallet_address: m.details?.wallet_address ?? '',
       gateway_url: m.details?.gateway_url ?? '',
+      gateway_channel: m.details?.gateway_channel ?? 'all',
       bank_name: m.details?.bank_name ?? '',
       account_name: m.details?.account_name ?? '',
       account_number: m.details?.account_number ?? '',
@@ -97,6 +100,7 @@ export default function AdminPaymentMethodsPage() {
         qr_image: form.qr_image || undefined,
         wallet_address: form.wallet_address || undefined,
         gateway_url: form.gateway_url || undefined,
+        gateway_channel: form.gateway_channel || undefined,
         bank_name: form.bank_name || undefined,
         account_name: form.account_name || undefined,
         account_number: form.account_number || undefined,
@@ -174,6 +178,7 @@ export default function AdminPaymentMethodsPage() {
                   <SelectItem value="static_qr_code">Static QR Code</SelectItem>
                   <SelectItem value="wallet_address">Wallet Address</SelectItem>
                   <SelectItem value="payment_gateway">Payment Gateway</SelectItem>
+                  <SelectItem value="enterprise_api">Enterprise API</SelectItem>
                   <SelectItem value="business_deposit">Business Deposit</SelectItem>
                 </SelectContent>
               </Select>
@@ -190,6 +195,26 @@ export default function AdminPaymentMethodsPage() {
             )}
             {form.type === 'payment_gateway' && (
               <div><Label className="text-xs">Gateway URL</Label><Input value={form.gateway_url} onChange={e => setForm(p => ({ ...p, gateway_url: e.target.value }))} className="mt-1 h-8 text-sm" /></div>
+            )}
+            {form.type === 'enterprise_api' && (
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Secure Gateway URL</Label>
+                  <Input value={form.gateway_url} onChange={e => setForm(p => ({ ...p, gateway_url: e.target.value }))} className="mt-1 h-8 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Gateway Channel</Label>
+                  <Select value={form.gateway_channel} onValueChange={v => setForm(p => ({ ...p, gateway_channel: v as PaymentMethodForm['gateway_channel'] }))}>
+                    <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Methods</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="qrph">QRPh</SelectItem>
+                      <SelectItem value="maya">Maya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             )}
             {form.type === 'business_deposit' && (
               <div className="space-y-2">

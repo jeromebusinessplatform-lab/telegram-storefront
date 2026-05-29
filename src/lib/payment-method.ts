@@ -4,6 +4,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   static_qr_code: 'Static QR Code',
   wallet_address: 'Wallet Address',
   payment_gateway: 'Payment Gateway',
+  enterprise_api: 'Enterprise API',
   business_deposit: 'Business Deposit',
   qrph: 'QRPH / GCash',
   maya: 'Maya',
@@ -22,5 +23,5 @@ export function isManualPaymentMethod(method: PaymentMethod | { type: string } |
 
 export function isRedirectPaymentMethod(method: PaymentMethod | { type: string } | null | undefined): boolean {
   if (!method) return false;
-  return ['payment_gateway', 'maya'].includes(method.type);
+  return ['payment_gateway', 'maya', 'enterprise_api'].includes(method.type);
 }

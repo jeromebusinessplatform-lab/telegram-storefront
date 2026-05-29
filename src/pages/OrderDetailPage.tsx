@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, ReceiptFieldsConfig } from '@/types';
@@ -15,7 +15,9 @@ import { isManualPaymentMethod } from '@/lib/payment-method';
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const [params] = useSearchParams();
   const { toast } = useToast();
+  const handledGatewaySignature = useRef('');
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +31,11 @@ export default function OrderDetailPage() {
   const [showSubmittedProof, setShowSubmittedProof] = useState(false);
   const [showSubmittedBanner, setShowSubmittedBanner] = useState(Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted));
   const [orderNumberCopied, setOrderNumberCopied] = useState(false);
+
+  const lastSix = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    return trimmed ? trimmed.slice(-6) : '';
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -56,6 +63,58 @@ export default function OrderDetailPage() {
     const timer = setTimeout(() => setShowSubmittedBanner(false), 4200);
     return () => clearTimeout(timer);
   }, [showSubmittedBanner]);
+
+  useEffect(() => {
+    if (!id || !order) return;
+
+    const paymentReferenceNo = params.get('payment_reference_no')?.trim() ?? params.get('paymentReferenceNo')?.trim() ?? '';
+    const requestReferenceNo = params.get('request_reference_no')?.trim() ?? params.get('requestReferenceNo')?.trim() ?? '';
+    const qrphInvoiceNo = params.get('qrph_invoice_no')?.trim() ?? params.get('qrphInvoiceNo')?.trim() ?? '';
+    const gatewayChannel = params.get('gateway_channel')?.trim() ?? params.get('channel')?.trim() ?? '';
+    const callbackStatus = (params.get('payment_status') ?? params.get('status') ?? '').trim().toLowerCase();
+
+    const hasGatewayData = Boolean(paymentReferenceNo || requestReferenceNo || qrphInvoiceNo || callbackStatus);
+    if (!hasGatewayData) return;
+
+    const signature = [paymentReferenceNo, requestReferenceNo, qrphInvoiceNo, gatewayChannel, callbackStatus].join('|');
+    if (handledGatewaySignature.current === signature) return;
+
+    const existingReceipt = (order.receipt_data as Record<string, unknown> | null | undefined) ?? {};
+    const existingEnterprise = (existingReceipt.enterprise_api as Record<string, unknown> | undefined) ?? {};
+    const nextEnterprise = {
+      ...existingEnterprise,
+      gateway_channel: gatewayChannel || existingEnterprise.gateway_channel || null,
+      payment_reference_no: paymentReferenceNo || existingEnterprise.payment_reference_no || null,
+      payment_reference_last6: lastSix(paymentReferenceNo || String(existingEnterprise.payment_reference_no ?? '')),
+      request_reference_no: requestReferenceNo || existingEnterprise.request_reference_no || null,
+      request_reference_last6: lastSix(requestReferenceNo || String(existingEnterprise.request_reference_no ?? '')),
+      qrph_invoice_no: qrphInvoiceNo || existingEnterprise.qrph_invoice_no || null,
+      payment_status: callbackStatus ? callbackStatus.toUpperCase() : 'PAYMENT_SUCCESS',
+      updated_at: new Date().toISOString(),
+    };
+
+    const nextReceiptData = {
+      ...existingReceipt,
+      enterprise_api: nextEnterprise,
+    };
+
+    const nextStatus = callbackStatus === 'cancelled' || callbackStatus === 'failed' || callbackStatus === 'expired'
+      ? 'cancelled'
+      : 'payment_verified';
+
+    handledGatewaySignature.current = signature;
+
+    void supabase.from('orders').update({
+      receipt_data: nextReceiptData,
+      status: nextStatus,
+    }).eq('id', id).then(({ error }) => {
+      if (error) {
+        console.error('Failed to store enterprise gateway callback:', error);
+      } else {
+        setOrder(prev => prev ? { ...prev, receipt_data: nextReceiptData, status: nextStatus } : prev);
+      }
+    });
+  }, [id, order, params]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,6 +199,7 @@ export default function OrderDetailPage() {
   const needsProof = usesManualQrPayment && order.status === 'pending';
   const canTrackCourier = order.status === 'dispatched' && !!trackingUrl;
   const mayaReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.maya as Record<string, unknown> | undefined;
+  const enterpriseApiReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.enterprise_api as Record<string, unknown> | undefined;
   const mayaPaymentStatus = String(mayaReceipt?.payment_status ?? '').trim();
   const mayaPaymentLabel = {
     PAYMENT_SUCCESS: 'Paid',
@@ -147,6 +207,23 @@ export default function OrderDetailPage() {
     PAYMENT_EXPIRED: 'Expired',
     PAYMENT_CANCELLED: 'Cancelled',
   }[mayaPaymentStatus] ?? (mayaPaymentStatus || 'Pending');
+  const enterprisePaymentStatus = String(enterpriseApiReceipt?.payment_status ?? '').trim();
+  const enterprisePaymentLabel = {
+    PAYMENT_SUCCESS: 'Paid',
+    PAYMENT_FAILED: 'Failed',
+    PAYMENT_EXPIRED: 'Expired',
+    PAYMENT_CANCELLED: 'Cancelled',
+    SUCCESS: 'Paid',
+    FAILED: 'Failed',
+    EXPIRED: 'Expired',
+    CANCELLED: 'Cancelled',
+  }[enterprisePaymentStatus.toUpperCase()] ?? (enterprisePaymentStatus || 'Pending');
+  const enterprisePaymentRefLast6 = enterpriseApiReceipt?.payment_reference_last6
+    || lastSix(String(enterpriseApiReceipt?.payment_reference_no ?? ''))
+    || 'N/A';
+  const enterpriseRequestRefLast6 = enterpriseApiReceipt?.request_reference_last6
+    || lastSix(String(enterpriseApiReceipt?.request_reference_no ?? ''))
+    || 'N/A';
 
   return (
     <AppLayout showBack title="Order Details">
@@ -247,6 +324,32 @@ export default function OrderDetailPage() {
             <span className="font-black text-sm text-primary">₱{order.total.toFixed(2)}</span>
           </div>
         </div>
+
+        {(paymentMethod?.type === 'enterprise_api' || enterpriseApiReceipt) && (
+          <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">
+            <h3 className="text-sm font-bold text-foreground mb-2">Enterprise API Payment</h3>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Status</span>
+              <span className={`font-semibold ${(order.status === 'payment_verified' || enterprisePaymentLabel === 'Paid') ? 'text-green-600' : ''}`}>
+                {order.status === 'payment_verified' ? 'Paid' : enterprisePaymentLabel}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Payment Ref (last 6)</span>
+              <span className="font-mono break-all">{enterprisePaymentRefLast6}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Request Ref (last 6)</span>
+              <span className="font-mono break-all">{enterpriseRequestRefLast6}</span>
+            </div>
+            {enterpriseApiReceipt?.qrph_invoice_no && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">QRPh Invoice No.</span>
+                <span className="font-mono break-all">{String(enterpriseApiReceipt.qrph_invoice_no)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {(paymentMethod?.type === 'maya' || mayaReceipt) && (
           <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PaymentMethod, DeliveryProvider, FeeConfig, AppliedFee, Voucher, CheckoutFieldsConfig, ShippingAddress, DeliveryFeePaymentMode } from '@/types';
 import { CreditCard, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +52,9 @@ export default function CheckoutPage() {
   const [deliveryFeeMode, setDeliveryFeeMode] = useState<DeliveryFeePaymentMode>('pay_now');
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [activePaymentMethod, setActivePaymentMethod] = useState<PaymentMethod | null>(null);
+  const [showEnterprisePrompt, setShowEnterprisePrompt] = useState(false);
+  const [enterprisePendingMethod, setEnterprisePendingMethod] = useState<PaymentMethod | null>(null);
+  const [enterprisePromptAcknowledged, setEnterprisePromptAcknowledged] = useState(false);
   const quoteRunId = useRef(0);
 
   const [address, setAddress] = useState<ShippingAddress>({
@@ -87,7 +91,9 @@ export default function CheckoutPage() {
       setCheckoutConfig((cfg?.value ?? null) as CheckoutFieldsConfig | null);
       if (pm?.length) {
         const first = (pm[0] as unknown) as PaymentMethod;
-        setSelectedPayment(first);
+        if (first.type !== 'enterprise_api') {
+          setSelectedPayment(first);
+        }
         setActivePaymentMethod(first);
       }
     };
@@ -225,6 +231,11 @@ export default function CheckoutPage() {
     if (!customer) { toast({ description: 'Please login via Telegram first', variant: 'destructive' }); return; }
     if (!selectedPayment) { toast({ description: 'Please select a payment method', variant: 'destructive' }); return; }
     if (!selectedDelivery) { toast({ description: 'Please select a delivery option', variant: 'destructive' }); return; }
+    if (selectedPayment?.type === 'enterprise_api' && !enterprisePromptAcknowledged) {
+      setEnterprisePendingMethod(selectedPayment);
+      setShowEnterprisePrompt(true);
+      return;
+    }
     if (!address.name || !address.phone || !address.street_name || !address.barangay_town || !address.city_municipality) {
       toast({ description: 'Please fill in your delivery details', variant: 'destructive' }); return;
     }
@@ -407,6 +418,12 @@ export default function CheckoutPage() {
 
         clearCart();
         window.location.assign(mayaCheckout.checkout_url);
+        return;
+      }
+
+      if (selectedPayment.type === 'enterprise_api' && selectedPayment.details?.gateway_url) {
+        clearCart();
+        window.location.assign(selectedPayment.details.gateway_url);
         return;
       }
 
@@ -776,8 +793,14 @@ export default function CheckoutPage() {
                 aria-label={pm.name}
                 title={pm.name}
                 onClick={() => {
-                  setSelectedPayment(pm);
                   setActivePaymentMethod(pm);
+                  if (pm.type === 'enterprise_api') {
+                    setEnterprisePendingMethod(pm);
+                    setShowEnterprisePrompt(true);
+                    return;
+                  }
+                  setEnterprisePromptAcknowledged(false);
+                  setSelectedPayment(pm);
                   setShowPaymentDetails(true);
                 }}
                 className={`group aspect-square rounded-xl border p-2 transition-all ${
@@ -811,6 +834,54 @@ export default function CheckoutPage() {
         onOpenChange={setShowPaymentDetails}
         method={activePaymentMethod}
       />
+
+      <Dialog open={showEnterprisePrompt} onOpenChange={open => {
+        setShowEnterprisePrompt(open);
+        if (!open) setEnterprisePendingMethod(null);
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Secure Payment Gateway</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              You will be redirected to a secure payment gateway. Your payment is validated in real time, so there is no need to send a screenshot.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              For QRPh or Maya payments made through this gateway, the QRPh Invoice No. and reference numbers will be captured automatically after payment.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowEnterprisePrompt(false);
+                  setEnterprisePendingMethod(null);
+                  setEnterprisePromptAcknowledged(false);
+                  if (selectedPayment?.type === 'enterprise_api') {
+                    setSelectedPayment(null);
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 btn-gradient"
+                onClick={() => {
+                  if (enterprisePendingMethod) {
+                    setSelectedPayment(enterprisePendingMethod);
+                    setActivePaymentMethod(enterprisePendingMethod);
+                  }
+                  setEnterprisePromptAcknowledged(true);
+                  setShowEnterprisePrompt(false);
+                }}
+              >
+                I Agree
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="sticky bottom-0 p-3 border-t border-border bg-background shadow-brand-lg">
         <Button onClick={placeOrder} disabled={isPlacing || isCalculatingFee} className="w-full h-12 btn-gradient text-sm font-bold rounded-xl gap-2">

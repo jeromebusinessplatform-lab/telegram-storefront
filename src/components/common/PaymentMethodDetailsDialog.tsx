@@ -106,7 +106,15 @@ export default function PaymentMethodDetailsDialog({ open, onOpenChange, method 
 
           {isRedirectPaymentMethod(method) && (
             <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Payment Gateway</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                {method.type === 'enterprise_api' ? 'Enterprise API Gateway' : 'Payment Gateway'}
+              </p>
+              {method.details?.gateway_channel && (
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Channel</span>
+                  <span className="font-semibold uppercase">{method.details.gateway_channel}</span>
+                </div>
+              )}
               <Button asChild className="w-full gap-2 btn-gradient">
                 <a href={method.details.gateway_url || '#'} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" />

@@ -138,6 +138,7 @@ export interface PaymentMethodDetails {
   qr_image?: string;
   wallet_address?: string;
   gateway_url?: string;
+  gateway_channel?: 'card' | 'qrph' | 'maya' | 'all';
   bank_name?: string;
   account_name?: string;
   account_number?: string;
@@ -147,7 +148,7 @@ export interface PaymentMethodDetails {
 export interface PaymentMethod {
   id: string;
   name: string;
-  type: 'static_qr_code' | 'wallet_address' | 'payment_gateway' | 'business_deposit' | 'qrph' | 'maya' | 'cod' | 'custom';
+  type: 'static_qr_code' | 'wallet_address' | 'payment_gateway' | 'business_deposit' | 'qrph' | 'maya' | 'cod' | 'custom' | 'enterprise_api';
   details: PaymentMethodDetails;
   is_active: boolean;
   sort_order: number;

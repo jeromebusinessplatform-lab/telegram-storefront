@@ -29,6 +29,7 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
   const customer = order.customers;
   const paymentMethod = order.payment_methods;
   const mayaReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.maya as Record<string, unknown> | undefined;
+  const enterpriseApiReceipt = (order.receipt_data as Record<string, unknown> | null | undefined)?.enterprise_api as Record<string, unknown> | undefined;
   const mayaPaymentStatus = String(mayaReceipt?.payment_status ?? '').trim();
   const mayaPaymentLabel = {
     PAYMENT_SUCCESS: 'Paid',
@@ -36,6 +37,27 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
     PAYMENT_EXPIRED: 'Expired',
     PAYMENT_CANCELLED: 'Cancelled',
   }[mayaPaymentStatus] ?? (mayaPaymentStatus || null);
+  const enterprisePaymentStatus = String(enterpriseApiReceipt?.payment_status ?? '').trim();
+  const enterprisePaymentLabel = {
+    PAYMENT_SUCCESS: 'Paid',
+    PAYMENT_FAILED: 'Failed',
+    PAYMENT_EXPIRED: 'Expired',
+    PAYMENT_CANCELLED: 'Cancelled',
+    SUCCESS: 'Paid',
+    FAILED: 'Failed',
+    EXPIRED: 'Expired',
+    CANCELLED: 'Cancelled',
+  }[enterprisePaymentStatus.toUpperCase()] ?? (enterprisePaymentStatus || null);
+  const lastSix = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    return trimmed ? trimmed.slice(-6) : '';
+  };
+  const enterprisePaymentRefLast6 = enterpriseApiReceipt?.payment_reference_last6
+    || lastSix(String(enterpriseApiReceipt?.payment_reference_no ?? ''))
+    || 'N/A';
+  const enterpriseRequestRefLast6 = enterpriseApiReceipt?.request_reference_last6
+    || lastSix(String(enterpriseApiReceipt?.request_reference_no ?? ''))
+    || 'N/A';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -153,6 +175,32 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
                 <span className="text-muted-foreground">Reference</span>
                 <span className="font-mono font-semibold break-all">{String(mayaReceipt?.request_reference_number ?? order.id)}</span>
               </div>
+            </div>
+          )}
+
+          {(paymentMethod?.type === 'enterprise_api' || enterpriseApiReceipt) && (
+            <div className="border-t border-dashed border-border pt-3 space-y-1 text-xs">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Enterprise API Payment</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span className={`font-semibold ${(order.status === 'payment_verified' || enterprisePaymentLabel === 'Paid') ? 'text-green-600' : ''}`}>
+                  {order.status === 'payment_verified' ? 'Paid' : (enterprisePaymentLabel ?? 'Pending')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment Ref (last 6)</span>
+                <span className="font-mono font-semibold break-all">{enterprisePaymentRefLast6}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Request Ref (last 6)</span>
+                <span className="font-mono font-semibold break-all">{enterpriseRequestRefLast6}</span>
+              </div>
+              {enterpriseApiReceipt?.qrph_invoice_no && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">QRPh Invoice No.</span>
+                  <span className="font-mono font-semibold break-all">{String(enterpriseApiReceipt.qrph_invoice_no)}</span>
+                </div>
+              )}
             </div>
           )}
 
