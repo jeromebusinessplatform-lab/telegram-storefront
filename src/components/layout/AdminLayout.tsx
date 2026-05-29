@@ -64,13 +64,13 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-        <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-black">PC</span>
-          </div>
-          <div>
-          <div className="section-font text-sm text-foreground">PRIME CORE</div>
-          <div className="text-[10px] text-muted-foreground font-medium">Admin Panel</div>
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-black">PC</span>
+            </div>
+            <div>
+          <div className="section-font text-[8px] text-foreground">PRIME CORE</div>
+          <div className="text-[8px] text-muted-foreground font-medium">Admin Panel</div>
         </div>
       </div>
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
@@ -87,7 +87,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1 text-left">{label}</span>
+              <span className="flex-1 text-left text-[8px]">{label}</span>
               {isActive && <ChevronRight className="w-3.5 h-3.5" />}
             </button>
           );
@@ -143,16 +143,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-9 w-auto object-contain" />
           </div>
 
-          <h1 className="section-font text-base md:text-lg text-foreground text-center whitespace-nowrap">
+          <h1 className="section-font text-[8px] text-foreground text-center whitespace-nowrap">
             {title}
           </h1>
 
           <div className="flex flex-col items-end justify-center text-right leading-none min-w-0">
-            <div className="text-[10px] md:text-[11px] font-semibold text-foreground tabular-nums whitespace-nowrap">
+            <div className="text-[8px] font-semibold text-foreground tabular-nums whitespace-nowrap">
               {timeLabel}
             </div>
             {storeStatus && (
-              <div className="mt-1 text-[10px] md:text-[11px] font-black tracking-wide text-emerald-500 whitespace-nowrap">
+              <div className="mt-1 text-[8px] font-black tracking-wide text-emerald-500 whitespace-nowrap">
                 {storeStatus}
               </div>
             )}
