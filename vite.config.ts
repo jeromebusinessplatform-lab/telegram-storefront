@@ -31,42 +31,7 @@ export default defineConfig(({ mode }) => {
               return;
             }
 
-            if (
-              id.includes('/node_modules/react/') ||
-              id.includes('react-dom') ||
-              id.includes('react/jsx-runtime') ||
-              id.includes('react-router-dom') ||
-              id.includes('react-router') ||
-              id.includes('scheduler')
-            ) {
-              return 'react-vendor';
-            }
-
-            if (
-              id.includes('@supabase') ||
-              id.includes('@tanstack/react-query')
-            ) {
-              return 'data-vendor';
-            }
-
-            if (
-              id.includes('@radix-ui') ||
-              id.includes('lucide-react') ||
-              id.includes('sonner') ||
-              id.includes('cmdk') ||
-              id.includes('date-fns') ||
-              id.includes('embla-carousel-react') ||
-              id.includes('framer-motion') ||
-              id.includes('react-day-picker') ||
-              id.includes('react-hook-form') ||
-              id.includes('react-resizable-panels') ||
-              id.includes('input-otp') ||
-              id.includes('recharts') ||
-              id.includes('vaul') ||
-              id.includes('zod')
-            ) {
-              return 'ui-vendor';
-            }
+            return 'vendor';
           },
         },
       },
