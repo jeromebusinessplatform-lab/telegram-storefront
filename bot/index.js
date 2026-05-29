@@ -197,6 +197,10 @@ async function findOrderForMayaWebhook(payload) {
   return null;
 }
 
+function isEnterpriseApiOrder(order) {
+  return String(order?.payment_methods?.type ?? '').trim() === 'enterprise_api';
+}
+
 async function sendMayaPaymentNotification(order, payload, paymentStatus) {
   const orderNumber = order?.order_number ?? order?.id ?? 'Unknown';
   const customerTelegramId = order?.customers?.telegram_id;
@@ -433,6 +437,17 @@ const server = http.createServer(async (req, res) => {
         });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, ignored: true, reason: 'order_not_found' }));
+        return;
+      }
+
+      if (!isEnterpriseApiOrder(order)) {
+        console.warn('Maya webhook ignored because order is not using Enterprise API:', {
+          order_id: order.id,
+          order_number: order.order_number,
+          payment_method_type: order?.payment_methods?.type ?? null,
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ignored: true, reason: 'payment_method_not_enterprise_api' }));
         return;
       }
 
