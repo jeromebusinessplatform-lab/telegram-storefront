@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         startParam: webApp?.initDataUnsafe?.start_param ?? null,
       };
     },
-    [tg],
+    [],
   );
 
   const init = useCallback(async () => {
