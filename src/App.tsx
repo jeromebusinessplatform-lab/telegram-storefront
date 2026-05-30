@@ -8,9 +8,9 @@ import { CartProvider } from "./context/CartContext";
 import { SupportProvider } from "./context/SupportContext";
 
 const queryClient = new QueryClient();
+const router = createBrowserRouter(routers);
 
 const App = () => {
-  const router = createBrowserRouter(routers);
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
