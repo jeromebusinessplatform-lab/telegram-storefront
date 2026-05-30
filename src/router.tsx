@@ -1,4 +1,3 @@
-import { createBrowserRouter } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import ShopPage from './pages/ShopPage';
 import ProductPage from './pages/ProductPage';
@@ -8,6 +7,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
 import SupportPage from './pages/SupportPage';
 import AdminPage from './pages/AdminPage';
+import NotFound from './pages/NotFound';
 import StoreStatusPage from './pages/admin/StoreStatusPage';
 import OrderManagementPage from './pages/admin/OrderManagementPage';
 import InventoryPage from './pages/admin/InventoryPage';
@@ -48,4 +48,16 @@ export const routers = [
       { path: 'admin/settings',       element: <SystemSettingsPage /> },
     ],
   },
+  {
+    path: '*',
+    element: <NotFound />,
+  },
 ];
+
+declare global {
+  interface Window {
+    __routers__: typeof routers;
+  }
+}
+
+window.__routers__ = routers;
