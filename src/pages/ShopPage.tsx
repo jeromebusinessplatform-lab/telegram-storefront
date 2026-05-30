@@ -4,8 +4,8 @@ import { Search, ChevronDown, Tag } from 'lucide-react';
 import { products, categories } from '@/data/products';
 import ProductCard from '@/components/shop/ProductCard';
 
-// Fixed banner height in px — must match the rendered banner
-const BANNER_H = 76;
+// Banner height in px — matches the rendered fixed banner
+const BANNER_H = 80;
 
 export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -26,18 +26,18 @@ export default function ShopPage() {
   return (
     <div className="flex flex-col min-h-full">
 
-      {/* ── Fixed Banner — truly non-scrolling ── */}
+      {/* ── Fixed Banner — non-scrolling, drop-shadow highlight ── */}
       {showBanner && (
         <>
-          {/* Fixed overlay, sits right below the 56px header */}
           <div
-            className="fixed left-0 right-0 z-30 bg-background px-5 py-2"
+            className="fixed left-0 right-0 z-30 bg-background px-[24px] py-2"
             style={{ top: 56 }}
           >
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-banner-gradient border-l-4 border-l-primary rounded-xl px-4 py-2.5 flex items-center justify-between shadow-banner"
+              className="bg-banner-gradient rounded-xl px-4 py-2.5 flex items-center justify-between"
+              style={{ filter: 'drop-shadow(0 6px 18px hsl(199 84% 46% / 0.32))' }}
             >
               <div>
                 <div className="flex items-center gap-1 mb-0.5">
@@ -55,48 +55,47 @@ export default function ShopPage() {
               </div>
             </motion.div>
           </div>
-          {/* Spacer pushes content below the fixed banner */}
           <div style={{ height: BANNER_H }} />
         </>
       )}
 
-      {/* ── Search + Category Dropdown ── */}
-      <div className="px-5 mt-4 flex gap-2.5 items-center">
+      {/* ── Search + Category — same horizontal span as the grid ── */}
+      <div className="px-[24px] mt-3 flex gap-2 items-center">
         <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card rounded-xl pl-8 pr-3 py-2.5 text-[11px] font-medium text-foreground placeholder:text-muted-foreground border border-border outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 shadow-card transition-all"
+            className="w-full bg-card rounded-xl pl-[28px] pr-2.5 py-[7px] text-[11px] font-medium text-foreground placeholder:text-muted-foreground border border-border outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 shadow-card transition-all"
           />
         </div>
         <div className="relative flex-shrink-0">
           <select
             value={activeCategory}
             onChange={(e) => setActiveCategory(e.target.value)}
-            className="appearance-none bg-card border border-border rounded-xl pl-3 pr-7 py-2.5 text-[11px] font-semibold text-foreground outline-none focus:border-primary/50 shadow-card cursor-pointer min-w-[88px]"
+            className="appearance-none bg-card border border-border rounded-xl pl-2.5 pr-6 py-[7px] text-[11px] font-semibold text-foreground outline-none focus:border-primary/50 shadow-card cursor-pointer min-w-[80px]"
           >
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-          <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         </div>
       </div>
 
-      {/* ── Products grid — 3 columns, wider gap ── */}
-      <div className="px-5 mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[12px] font-bold text-foreground font-condensed">
+      {/* ── Products grid — 3 columns, card edges aligned to nav icons ── */}
+      <div className="px-[24px] mt-3">
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="text-[11px] font-bold text-foreground font-condensed uppercase tracking-wide">
             {activeCategoryLabel === 'All' ? 'All Products' : activeCategoryLabel}
           </h2>
           <span className="text-[10px] text-muted-foreground">{filtered.length} items</span>
         </div>
 
         {filtered.length > 0 ? (
-          <motion.div layout className="grid grid-cols-3 gap-3 pb-5">
+          <motion.div layout className="grid grid-cols-3 gap-[10px] pb-5">
             {filtered.map((product, i) => (
               <motion.div
                 key={product.id}
@@ -110,8 +109,8 @@ export default function ShopPage() {
             ))}
           </motion.div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Search size={30} className="text-muted-foreground/30 mb-3" />
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <Search size={28} className="text-muted-foreground/30 mb-3" />
             <p className="text-sm font-semibold text-foreground">No products found</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different search or category</p>
           </div>
