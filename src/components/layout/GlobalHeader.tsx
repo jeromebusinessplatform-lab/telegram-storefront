@@ -1,13 +1,13 @@
 export default function GlobalHeader() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-hero-gradient">
+    <header className="fixed top-0 left-0 right-0 z-40 bg-card border-b border-border">
       <div className="max-w-sm mx-auto px-5 h-14 flex items-center">
-        <div>
-          <h1 className="text-primary-foreground font-bold text-base leading-none font-condensed tracking-wide">
-            ShopBot
-          </h1>
-          <p className="text-primary-foreground/65 text-[10px] font-medium mt-0.5">Mini Store</p>
-        </div>
+        <img
+          src="https://grazia-prod.oss-ap-southeast-1.aliyuncs.com/resources/uid_100058578/733045e7-e834-47.png"
+          alt="Prime Core"
+          className="h-8 w-auto object-contain"
+          crossOrigin="anonymous"
+        />
       </div>
     </header>
   );
