@@ -28,6 +28,26 @@ const slugify = (value: string) =>
 const dragStyles = (isActive: boolean) =>
   cn('rounded-2xl border p-3 transition-all', isActive ? 'border-primary bg-primary/5 shadow-brand-sm' : 'border-border bg-card');
 
+const BUTTON_DESTINATIONS = [
+  { value: 'home', label: 'Home', href: '/' },
+  { value: 'cart', label: 'Cart', href: '/cart' },
+  { value: 'checkout', label: 'Checkout', href: '/checkout' },
+  { value: 'orders', label: 'Orders', href: '/orders' },
+  { value: 'profile', label: 'Profile', href: '/profile' },
+  { value: 'support', label: 'Support', href: '/support' },
+  { value: 'notifications', label: 'Notifications', href: '/notifications' },
+  { value: 'custom_page', label: 'Custom Page', href: '/page/custom-page' },
+  { value: 'external_url', label: 'External URL', href: 'https://example.com' },
+] as const;
+
+const getButtonDestination = (href: string) => {
+  const matched = BUTTON_DESTINATIONS.find((destination) => destination.href === href);
+  if (matched) return matched.value;
+  if (href.startsWith('/page/')) return 'custom_page';
+  if (/^https?:\/\//i.test(href)) return 'external_url';
+  return 'external_url';
+};
+
 export default function AdminPageBuilderPage() {
   const { toast } = useToast();
   const [config, setConfig] = useState<PageBuilderConfig>(DEFAULT_PAGE_BUILDER_CONFIG);
@@ -390,11 +410,111 @@ export default function AdminPageBuilderPage() {
                 </div>
 
                 <div>
+                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                    <div>
+                      <Label className="text-xs font-semibold">Remove Background</Label>
+                      <p className="text-[10px] text-muted-foreground">Applies to uploaded files and works best with plain backgrounds.</p>
+                    </div>
+                    <Switch
+                      checked={selectedBlock.style.remove_background}
+                      onCheckedChange={(checked) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, remove_background: checked } }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
                   <ImageUploadInput
                     label="Image"
                     value={selectedBlock.image_url}
+                    removeBackground={selectedBlock.style.remove_background}
                     onChange={(url) => updateBlock(selectedBlock.id, (block) => ({ ...block, image_url: url }))}
                   />
+                </div>
+
+                <div className="rounded-xl border border-border p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-bold">Crop & Frame</p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mb-2">
+                    Use zoom, pan, and fit to crop the image exactly where you want it.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px]">Fit</Label>
+                      <select
+                        value={selectedBlock.style.image_fit}
+                        onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_fit: e.target.value as PageBuilderBlock['style']['image_fit'] } }))}
+                        className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                      >
+                        <option value="cover">Crop / Cover</option>
+                        <option value="contain">Contain</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-[10px]">Border Radius: {selectedBlock.style.border_radius}px</Label>
+                      <Input
+                        type="range"
+                        min="0"
+                        max="40"
+                        step="1"
+                        value={selectedBlock.style.border_radius}
+                        onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, border_radius: parseInt(e.target.value, 10) } }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div>
+                      <Label className="text-[10px]">Zoom: {selectedBlock.style.image_zoom.toFixed(2)}x</Label>
+                      <Input
+                        type="range"
+                        min="1"
+                        max="2.5"
+                        step="0.05"
+                        value={selectedBlock.style.image_zoom}
+                        onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_zoom: parseFloat(e.target.value) } }))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px]">Pan X: {selectedBlock.style.image_position_x}%</Label>
+                      <Input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={selectedBlock.style.image_position_x}
+                        onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_position_x: parseInt(e.target.value, 10) } }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <Label className="text-[10px]">Pan Y: {selectedBlock.style.image_position_y}%</Label>
+                    <Input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={selectedBlock.style.image_position_y}
+                      onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_position_y: parseInt(e.target.value, 10) } }))}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-[10px]">Alignment</Label>
+                  <select
+                    value={selectedBlock.style.alignment}
+                    onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, alignment: e.target.value as PageBuilderBlock['style']['alignment'] } }))}
+                    className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                  >
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -406,6 +526,26 @@ export default function AdminPageBuilderPage() {
                     <Label className="text-[10px]">Button Link</Label>
                     <Input value={selectedBlock.button_href} onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, button_href: e.target.value }))} className="mt-1 h-8 text-xs" />
                   </div>
+                </div>
+
+                <div>
+                  <Label className="text-[10px]">Button Destination</Label>
+                  <select
+                    value={getButtonDestination(selectedBlock.button_href)}
+                    onChange={(e) => {
+                      const choice = BUTTON_DESTINATIONS.find((destination) => destination.value === e.target.value);
+                      if (!choice) return;
+                      updateBlock(selectedBlock.id, (block) => ({ ...block, button_href: choice.href }));
+                    }}
+                    className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                  >
+                    {BUTTON_DESTINATIONS.map((destination) => (
+                      <option key={destination.value} value={destination.value}>{destination.label}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Pick where the customer should go, then fine-tune the link below if needed.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -451,83 +591,10 @@ export default function AdminPageBuilderPage() {
                   <Input type="color" value={selectedBlock.style.background_color} onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, background_color: e.target.value } }))} className="mt-1 h-8 p-1" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[10px]">Alignment</Label>
-                    <select
-                      value={selectedBlock.style.alignment}
-                      onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, alignment: e.target.value as PageBuilderBlock['style']['alignment'] } }))}
-                      className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Image Fit</Label>
-                    <select
-                      value={selectedBlock.style.image_fit}
-                      onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_fit: e.target.value as PageBuilderBlock['style']['image_fit'] } }))}
-                      className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
-                    >
-                      <option value="cover">Cover</option>
-                      <option value="contain">Contain</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-[10px]">Image Zoom: {selectedBlock.style.image_zoom.toFixed(2)}x</Label>
-                  <Input
-                    type="range"
-                    min="1"
-                    max="2.5"
-                    step="0.05"
-                    value={selectedBlock.style.image_zoom}
-                    onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_zoom: parseFloat(e.target.value) } }))}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[10px]">Image X Position</Label>
-                    <Input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={selectedBlock.style.image_position_x}
-                      onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_position_x: parseInt(e.target.value, 10) } }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Image Y Position</Label>
-                    <Input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={selectedBlock.style.image_position_y}
-                      onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, image_position_y: parseInt(e.target.value, 10) } }))}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-[10px]">Border Radius: {selectedBlock.style.border_radius}px</Label>
-                  <Input
-                    type="range"
-                    min="0"
-                    max="40"
-                    step="1"
-                    value={selectedBlock.style.border_radius}
-                    onChange={(e) => updateBlock(selectedBlock.id, (block) => ({ ...block, style: { ...block.style, border_radius: parseInt(e.target.value, 10) } }))}
-                    className="mt-1"
-                  />
+                <div className="rounded-xl border border-dashed border-border p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    Background remover runs only on uploaded files. If you use a URL, upload the image instead.
+                  </p>
                 </div>
               </div>
             )}

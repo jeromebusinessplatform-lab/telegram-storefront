@@ -20,6 +20,7 @@ const defaultBlockStyle = (): PageBuilderBlockStyle => ({
   image_position_y: 50,
   image_zoom: 1,
   border_radius: 24,
+  remove_background: false,
 });
 
 const createId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
@@ -77,6 +78,7 @@ const normalizePage = (page: Partial<PageBuilderPage> & Pick<PageBuilderPage, 's
     style: {
       ...defaultBlockStyle(),
       ...(block.style ?? {}),
+      remove_background: block.style?.remove_background ?? false,
     },
   })),
 });

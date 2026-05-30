@@ -3,14 +3,16 @@ import { Link, Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { removeSimpleBackgroundFromDataUrl } from '@/lib/image-tools';
 
 interface ImageUploadInputProps {
   value: string;
   onChange: (url: string) => void;
   label?: string;
+  removeBackground?: boolean;
 }
 
-export default function ImageUploadInput({ value, onChange, label = 'Image' }: ImageUploadInputProps) {
+export default function ImageUploadInput({ value, onChange, label = 'Image', removeBackground = false }: ImageUploadInputProps) {
   const [urlInput, setUrlInput] = useState(value || '');
   const [preview, setPreview] = useState(value || '');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -32,6 +34,18 @@ export default function ImageUploadInput({ value, onChange, label = 'Image' }: I
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
+      if (removeBackground) {
+        void removeSimpleBackgroundFromDataUrl(dataUrl)
+          .then((processed) => {
+            setPreview(processed);
+            onChange(processed);
+          })
+          .catch(() => {
+            setPreview(dataUrl);
+            onChange(dataUrl);
+          });
+        return;
+      }
       setPreview(dataUrl);
       onChange(dataUrl);
     };
@@ -75,6 +89,12 @@ export default function ImageUploadInput({ value, onChange, label = 'Image' }: I
           />
         </TabsContent>
       </Tabs>
+
+      {removeBackground && (
+        <p className="text-[10px] text-muted-foreground">
+          Background removal is applied to uploaded files. For best results, upload a product image with a plain background.
+        </p>
+      )}
 
       {preview && (
         <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border">

@@ -383,6 +383,7 @@ export interface PageBuilderBlockStyle {
   image_position_y: number;
   image_zoom: number;
   border_radius: number;
+  remove_background: boolean;
 }
 
 export interface PageBuilderBlock {
