@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { routers } from "./router";
 import { CartProvider } from "./context/CartContext";
 import { SupportProvider } from "./context/SupportContext";
+import { AdminProvider } from "./context/AdminContext";
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter(routers);
@@ -14,13 +15,15 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        <SupportProvider>
+        <AdminProvider>
+          <SupportProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <RouterProvider router={router} />
           </TooltipProvider>
-        </SupportProvider>
+          </SupportProvider>
+        </AdminProvider>
       </CartProvider>
     </QueryClientProvider>
   );

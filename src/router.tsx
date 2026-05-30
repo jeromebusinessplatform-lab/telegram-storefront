@@ -1,3 +1,4 @@
+import { createBrowserRouter } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import ShopPage from './pages/ShopPage';
 import ProductPage from './pages/ProductPage';
@@ -5,9 +6,20 @@ import CartPage from './pages/CartPage';
 import OrdersPage from './pages/OrdersPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
-import AdminPage from './pages/AdminPage';
 import SupportPage from './pages/SupportPage';
-import NotFound from './pages/NotFound';
+import AdminPage from './pages/AdminPage';
+import StoreStatusPage from './pages/admin/StoreStatusPage';
+import OrderManagementPage from './pages/admin/OrderManagementPage';
+import InventoryPage from './pages/admin/InventoryPage';
+import PaymentManagementPage from './pages/admin/PaymentManagementPage';
+import CustomerManagementPage from './pages/admin/CustomerManagementPage';
+import PromosPage from './pages/admin/PromosPage';
+import ChargeManagementPage from './pages/admin/ChargeManagementPage';
+import DeliveryManagementPage from './pages/admin/DeliveryManagementPage';
+import CashflowPage from './pages/admin/CashflowPage';
+import AnnouncementPage from './pages/admin/AnnouncementPage';
+import AdminSupportCenterPage from './pages/admin/AdminSupportCenterPage';
+import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 
 export const routers = [
   {
@@ -22,19 +34,18 @@ export const routers = [
       { path: 'profile', element: <ProfilePage /> },
       { path: 'support', element: <SupportPage /> },
       { path: 'admin', element: <AdminPage /> },
+      { path: 'admin/store-status',   element: <StoreStatusPage /> },
+      { path: 'admin/orders',         element: <OrderManagementPage /> },
+      { path: 'admin/inventory',      element: <InventoryPage /> },
+      { path: 'admin/payments',       element: <PaymentManagementPage /> },
+      { path: 'admin/customers',      element: <CustomerManagementPage /> },
+      { path: 'admin/promos',         element: <PromosPage /> },
+      { path: 'admin/charges',        element: <ChargeManagementPage /> },
+      { path: 'admin/delivery',       element: <DeliveryManagementPage /> },
+      { path: 'admin/cashflow',       element: <CashflowPage /> },
+      { path: 'admin/announcements',  element: <AnnouncementPage /> },
+      { path: 'admin/support-config', element: <AdminSupportCenterPage /> },
+      { path: 'admin/settings',       element: <SystemSettingsPage /> },
     ],
   },
-  {
-    path: '*',
-    name: '404',
-    element: <NotFound />,
-  },
 ];
-
-declare global {
-  interface Window {
-    __routers__: typeof routers;
-  }
-}
-
-window.__routers__ = routers;
