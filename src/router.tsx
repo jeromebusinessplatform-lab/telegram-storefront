@@ -1,16 +1,24 @@
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import AppLayout from './components/layout/AppLayout';
+import ShopPage from './pages/ShopPage';
+import ProductPage from './pages/ProductPage';
+import CartPage from './pages/CartPage';
+import OrdersPage from './pages/OrdersPage';
+import NotFound from './pages/NotFound';
 
 export const routers = [
   {
-    path: "/",
-    name: "home",
-    element: <Index />,
+    path: '/',
+    element: <AppLayout />,
+    children: [
+      { index: true, element: <ShopPage /> },
+      { path: 'product/:id', element: <ProductPage /> },
+      { path: 'cart', element: <CartPage /> },
+      { path: 'orders', element: <OrdersPage /> },
+    ],
   },
-  /* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */
   {
-    path: "*",
-    name: "404",
+    path: '*',
+    name: '404',
     element: <NotFound />,
   },
 ];
