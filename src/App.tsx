@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { routers } from "./router";
 import { CartProvider } from "./context/CartContext";
+import { SupportProvider } from "./context/SupportContext";
 
 const queryClient = new QueryClient();
 
@@ -13,11 +14,13 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <RouterProvider router={router} />
-        </TooltipProvider>
+        <SupportProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <RouterProvider router={router} />
+          </TooltipProvider>
+        </SupportProvider>
       </CartProvider>
     </QueryClientProvider>
   );

@@ -83,10 +83,12 @@ export default {
 			boxShadow: {
 				card: 'var(--shadow-card)',
 				elevated: 'var(--shadow-elevated)',
+				banner: 'var(--shadow-banner)',
 			},
 			backgroundImage: {
 				'hero-gradient': 'var(--gradient-hero)',
 				'card-gradient': 'var(--gradient-card)',
+				'banner-gradient': 'var(--gradient-banner)',
 			},
 			keyframes: {
 				'accordion-down': {

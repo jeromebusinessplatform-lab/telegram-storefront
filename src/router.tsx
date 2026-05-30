@@ -6,6 +6,7 @@ import OrdersPage from './pages/OrdersPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import SupportPage from './pages/SupportPage';
 import NotFound from './pages/NotFound';
 
 export const routers = [
@@ -19,6 +20,7 @@ export const routers = [
       { path: 'orders', element: <OrdersPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'support', element: <SupportPage /> },
       { path: 'admin', element: <AdminPage /> },
     ],
   },
