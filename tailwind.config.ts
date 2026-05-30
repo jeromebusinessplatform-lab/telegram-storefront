@@ -20,7 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Plus Jakarta Sans', 'sans-serif'],
+				sans: ['Inter', 'Arimo', 'sans-serif'],
+				condensed: ['Roboto Condensed', 'Inter', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

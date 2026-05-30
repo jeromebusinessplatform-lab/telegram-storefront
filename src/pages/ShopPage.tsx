@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Bell } from 'lucide-react';
-import { products } from '@/data/products';
-import CategoryFilter from '@/components/shop/CategoryFilter';
+import { Search, ChevronDown } from 'lucide-react';
+import { products, categories } from '@/data/products';
 import ProductCard from '@/components/shop/ProductCard';
 
 export default function ShopPage() {
@@ -18,79 +17,75 @@ export default function ShopPage() {
     return list;
   }, [activeCategory, searchQuery]);
 
+  const activeCategoryLabel = categories.find((c) => c.id === activeCategory)?.name ?? 'All';
+
   return (
     <div className="flex flex-col min-h-full">
-      {/* Header */}
-      <div className="bg-hero-gradient px-4 pt-10 pb-6 rounded-b-3xl">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-primary-foreground/70 text-sm font-medium">Welcome back</p>
-            <h1 className="text-primary-foreground text-xl font-bold">ShopBot Store</h1>
-          </div>
-          <button className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center text-primary-foreground backdrop-blur-sm">
-            <Bell size={18} />
-          </button>
-        </div>
-        {/* Search */}
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card/95 backdrop-blur-sm rounded-2xl pl-9 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground border-0 outline-none focus:ring-2 focus:ring-primary/30 shadow-card"
-          />
-        </div>
-      </div>
-
       {/* Banner */}
       {!searchQuery && activeCategory === 'all' && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-4 mt-4"
+          className="mx-3 mt-3"
         >
-          <div className="bg-primary/8 border border-primary/20 rounded-2xl p-4 flex items-center justify-between overflow-hidden relative">
+          <div className="bg-primary/8 border border-primary/20 rounded-2xl px-4 py-3 flex items-center justify-between overflow-hidden">
             <div>
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide">Flash Sale</p>
-              <p className="text-base font-bold text-foreground mt-0.5">Up to 40% off<br />selected items</p>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">Flash Sale</p>
+              <p className="text-sm font-bold text-foreground mt-0.5 font-condensed">Up to 40% off selected items</p>
             </div>
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl font-black text-primary">40%</span>
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl font-black text-primary font-condensed">40%</span>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Categories */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-sm font-bold text-foreground">Categories</h2>
+      {/* Search + Category Dropdown */}
+      <div className="px-3 mt-3 flex gap-2 items-center">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-card rounded-xl pl-8 pr-3 py-2.5 text-[12px] font-medium text-foreground placeholder:text-muted-foreground border border-border outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 shadow-card transition-all"
+          />
         </div>
-        <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
+
+        {/* Category dropdown */}
+        <div className="relative flex-shrink-0">
+          <select
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            className="appearance-none bg-card border border-border rounded-xl pl-3 pr-7 py-2.5 text-[12px] font-semibold text-foreground outline-none focus:border-primary/50 shadow-card cursor-pointer min-w-[90px]"
+          >
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
       </div>
 
-      {/* Products grid */}
-      <div className="px-4 mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-foreground">
-            {activeCategory === 'all' ? 'All Products' : activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)}
+      {/* Products grid - 3 columns */}
+      <div className="px-3 mt-3">
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="text-sm font-bold text-foreground font-condensed">
+            {activeCategoryLabel === 'All' ? 'All Products' : activeCategoryLabel}
           </h2>
-          <span className="text-xs text-muted-foreground">{filtered.length} items</span>
+          <span className="text-[11px] text-muted-foreground">{filtered.length} items</span>
         </div>
 
         {filtered.length > 0 ? (
-          <motion.div
-            layout
-            className="grid grid-cols-2 gap-3 pb-4"
-          >
+          <motion.div layout className="grid grid-cols-3 gap-2 pb-4">
             {filtered.map((product, i) => (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.3 }}
+                transition={{ delay: i * 0.03, duration: 0.25 }}
                 layout
               >
                 <ProductCard product={product} />
@@ -98,10 +93,10 @@ export default function ShopPage() {
             ))}
           </motion.div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Search size={36} className="text-muted-foreground/40 mb-3" />
-            <p className="text-base font-semibold text-foreground">No products found</p>
-            <p className="text-sm text-muted-foreground mt-1">Try a different search or category</p>
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <Search size={32} className="text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-semibold text-foreground">No products found</p>
+            <p className="text-xs text-muted-foreground mt-1">Try a different search or category</p>
           </div>
         )}
       </div>

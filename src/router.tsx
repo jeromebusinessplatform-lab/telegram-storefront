@@ -3,6 +3,9 @@ import ShopPage from './pages/ShopPage';
 import ProductPage from './pages/ProductPage';
 import CartPage from './pages/CartPage';
 import OrdersPage from './pages/OrdersPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 import NotFound from './pages/NotFound';
 
 export const routers = [
@@ -14,6 +17,9 @@ export const routers = [
       { path: 'product/:id', element: <ProductPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'orders', element: <OrdersPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
+      { path: 'profile', element: <ProfilePage /> },
+      { path: 'admin', element: <AdminPage /> },
     ],
   },
   {
