@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useGlobalDesign } from '@/contexts/GlobalDesignContext';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag, CreditCard, Truck,
   DollarSign, Settings, MessageCircle, Bell, LogOut, Menu, X, ChevronRight, LayoutGrid
@@ -31,6 +32,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, isAdmin } = useAdmin();
+  const { logoUrl } = useGlobalDesign();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
@@ -141,7 +143,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-9 w-auto object-contain" />
+            <img src={logoUrl} alt="Prime Core logo" className="h-9 w-auto object-contain" />
           </div>
 
           <h1 className="section-font text-[8px] text-foreground text-center whitespace-nowrap">

@@ -7,6 +7,7 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { useNavigate } from 'react-router-dom';
 import { Package, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatMoney } from '@/lib/money';
 
 export default function OrdersPage() {
   const { customer } = useAuth();
@@ -68,7 +69,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">{order.items?.length ?? 0} item{order.items?.length !== 1 ? 's' : ''} · {(order.payment_methods as {name: string} | null)?.name ?? ''}</p>
-                  <p className="font-black text-sm text-foreground">₱{order.total.toFixed(2)}</p>
+                  <p className="font-black text-sm text-foreground">{formatMoney(order.total)}</p>
                 </div>
               </div>
             ))}

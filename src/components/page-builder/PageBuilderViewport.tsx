@@ -168,13 +168,33 @@ export default function PageBuilderViewport({ pageSlug }: PageBuilderViewportPro
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       const { data } = await supabase.from('app_settings').select('value').eq('key', PAGE_BUILDER_SETTING_KEY).maybeSingle();
+      if (!active) return;
       const next = normalizePageBuilderConfig(data?.value ?? DEFAULT_PAGE_BUILDER_CONFIG);
       setConfig(next);
       setIsLoading(false);
     };
     void load();
+
+    const channel = supabase
+      .channel(`page-builder-${pageSlug}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'app_settings', filter: `key=eq.${PAGE_BUILDER_SETTING_KEY}` },
+        (payload) => {
+          const next = normalizePageBuilderConfig((payload.new as { value?: unknown } | null)?.value ?? DEFAULT_PAGE_BUILDER_CONFIG);
+          setConfig(next);
+          setIsLoading(false);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   const blocks = useMemo(() => {

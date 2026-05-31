@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Upload, FileText, Image as ImageIcon, Truck, Copy, QrCode, CheckCircle2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isManualPaymentMethod } from '@/lib/payment-method';
+import { formatMoney } from '@/lib/money';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -298,7 +299,7 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-bold">x{item.quantity}</p>
-                  <p className="text-xs font-black text-primary">₱{(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-xs font-black text-primary">{formatMoney(item.price * item.quantity)}</p>
                 </div>
               </div>
             ))}
@@ -308,20 +309,20 @@ export default function OrderDetailPage() {
         {/* Price breakdown */}
         <div className="bg-card rounded-xl p-4 border border-border shadow-brand-sm space-y-1.5">
           <h3 className="text-sm font-bold text-foreground mb-2">Price Breakdown</h3>
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal</span><span>₱{order.subtotal.toFixed(2)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal</span><span>{formatMoney(order.subtotal)}</span></div>
           {order.fees_applied?.map((f, i) => (
             <div key={i} className="flex justify-between text-xs">
               <span className="text-muted-foreground">{f.name}</span>
-              <span className={f.category === 'discount' ? 'text-green-600' : ''}>{f.category === 'discount' ? '-' : '+'}₱{f.amount.toFixed(2)}</span>
+              <span className={f.category === 'discount' ? 'text-green-600' : ''}>{f.category === 'discount' ? '-' : '+'}{formatMoney(f.amount)}</span>
             </div>
           ))}
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Delivery</span><span>₱{order.delivery_fee.toFixed(2)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Delivery</span><span>{formatMoney(order.delivery_fee)}</span></div>
           {order.voucher_discount > 0 && (
-            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher</span><span className="text-green-600">-₱{order.voucher_discount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher</span><span className="text-green-600">-{formatMoney(order.voucher_discount)}</span></div>
           )}
           <div className="flex justify-between pt-2 border-t border-border">
             <span className="font-bold text-sm">Total</span>
-            <span className="font-black text-sm text-primary">₱{order.total.toFixed(2)}</span>
+            <span className="font-black text-sm text-primary">{formatMoney(order.total)}</span>
           </div>
         </div>
 

@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useGlobalDesign } from '@/contexts/GlobalDesignContext';
 import type { AnnouncementConfig, Category, Product } from '@/types';
+import AnnouncementBanner from '@/components/products/AnnouncementBanner';
 import PageBuilderViewport from '@/components/page-builder/PageBuilderViewport';
+import { formatMoney } from '@/lib/money';
 
 type ProductRow = Product & {
   categories?: {
@@ -17,6 +20,7 @@ export default function StorePage() {
   const navigate = useNavigate();
   const { customer, isLoading: isAuthLoading } = useAuth();
   const { addItem, totalItems } = useCart();
+  const { logoUrl } = useGlobalDesign();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [announcement, setAnnouncement] = useState<AnnouncementConfig | null>(null);
@@ -93,12 +97,13 @@ export default function StorePage() {
 
   const addProduct = (product: ProductRow) => {
     const image = product.images?.[0] ?? '/placeholder.svg';
+    const effectivePrice = product.is_on_sale && product.sale_price != null ? product.sale_price : product.price;
     addItem({
       product_id: product.id,
       product_name: product.name,
       sub_name: product.sub_name,
       product_image: image,
-      price: product.price,
+      price: effectivePrice,
       quantity: 1,
     });
   };
@@ -107,9 +112,7 @@ export default function StorePage() {
     <div className="min-h-dvh bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-black text-primary-foreground">
-            PC
-          </div>
+          <img src={logoUrl} alt="Prime Core logo" className="h-10 w-auto object-contain" />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-black tracking-wide">PRIME CORE STORE</div>
             <div className="text-[11px] text-muted-foreground">
@@ -128,17 +131,7 @@ export default function StorePage() {
       <main className="mx-auto max-w-6xl px-4 py-4">
         <PageBuilderViewport pageSlug="store" />
 
-        {visibleAnnouncement && (
-          <section className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Announcement</p>
-            {visibleAnnouncement.title && <h1 className="mt-1 text-lg font-black">{visibleAnnouncement.title}</h1>}
-            {visibleAnnouncement.body_markdown && (
-              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                {visibleAnnouncement.body_markdown}
-              </p>
-            )}
-          </section>
-        )}
+        {visibleAnnouncement && <AnnouncementBanner announcement={visibleAnnouncement} />}
 
         <section className="mb-4 rounded-2xl border border-border bg-card p-4">
           <div className="grid gap-3 md:grid-cols-[1.5fr_1fr] md:items-center">
@@ -201,10 +194,12 @@ export default function StorePage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((product) => {
               const image = product.images?.[0] ?? '/placeholder.svg';
+              const isOnSale = product.is_on_sale && product.sale_price != null;
+              const effectivePrice = isOnSale ? product.sale_price : product.price;
               return (
                 <article key={product.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                   <a href={`/product/${product.id}`} className="block">
-                    <div className="aspect-square bg-muted">
+                    <div className="relative aspect-square bg-muted">
                       <img
                         src={image}
                         alt={product.name}
@@ -213,6 +208,11 @@ export default function StorePage() {
                           (event.target as HTMLImageElement).src = '/placeholder.svg';
                         }}
                       />
+                      {isOnSale && (
+                        <div className="absolute left-2 top-2 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground shadow-brand-sm ring-1 ring-primary/20">
+                          On Sale
+                        </div>
+                      )}
                     </div>
                   </a>
                   <div className="space-y-2 p-3">
@@ -221,12 +221,19 @@ export default function StorePage() {
                         {product.name}
                       </a>
                       {product.sub_name && <p className="text-[11px] text-muted-foreground">{product.sub_name}</p>}
-                      {product.categories?.name && (
-                        <p className="text-[11px] text-muted-foreground">{product.categories.name}</p>
-                      )}
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-black text-primary">₱{product.price.toFixed(2)}</span>
+                      <div className="min-w-0">
+                        {isOnSale ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[11px] text-muted-foreground line-through">{formatMoney(product.price)}</span>
+                            <span className="text-sm font-black text-primary">{formatMoney(effectivePrice ?? product.price)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-black text-primary">{formatMoney(effectivePrice ?? product.price)}</span>
+                        )}
+                        <p className="text-[11px] text-muted-foreground">Stocks left: {product.stock}</p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => addProduct(product)}

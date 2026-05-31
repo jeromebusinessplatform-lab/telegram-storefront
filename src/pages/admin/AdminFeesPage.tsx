@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { formatMoney } from '@/lib/money';
 
 const EMPTY = { name: '', category: 'charge', value_type: 'fixed', value: '', is_active: true, applies_always: true };
 const PREVIEW_BASE = 1000;
@@ -94,7 +95,7 @@ export default function AdminFeesPage() {
                 {!f.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Inactive</span>}
               </div>
               <p className="text-xs text-muted-foreground">
-                {f.value_type === 'percent' ? `${f.value}%` : `₱${f.value}`}
+                {f.value_type === 'percent' ? `${f.value}%` : formatMoney(f.value)}
                 {f.applies_always && ' · Applied to all orders'}
               </p>
             </div>
@@ -137,12 +138,12 @@ export default function AdminFeesPage() {
               <div><Label className="text-xs">Value *</Label><Input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} placeholder={form.value_type === 'percent' ? '5' : '50'} className="mt-1 h-8 text-sm" /></div>
             </div>
             <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2">
-              <p className="text-[11px] font-bold text-foreground">Live preview on ₱{PREVIEW_BASE.toFixed(2)}</p>
+              <p className="text-[11px] font-bold text-foreground">Live preview on {formatMoney(PREVIEW_BASE)}</p>
               <p className="text-[11px] text-muted-foreground">
-                {form.value_type === 'percent' ? `${previewValue}%` : `₱${previewValue.toFixed(2)}`} {form.category === 'discount' ? 'discounts' : 'charges'} {form.category === 'discount' ? 'subtract' : 'add'} {previewAmount > 0 ? `₱${previewAmount.toFixed(2)}` : '₱0.00'}.
+                {form.value_type === 'percent' ? `${previewValue}%` : formatMoney(previewValue)} {form.category === 'discount' ? 'discounts' : 'charges'} {form.category === 'discount' ? 'subtract' : 'add'} {previewAmount > 0 ? formatMoney(previewAmount) : formatMoney(0)}.
               </p>
               <p className={`text-[11px] font-semibold mt-1 ${previewSignedAmount < 0 ? 'text-green-600' : 'text-primary'}`}>
-                Net effect: {previewSignedAmount < 0 ? '-' : '+'}₱{Math.abs(previewSignedAmount).toFixed(2)}
+                Net effect: {previewSignedAmount < 0 ? '-' : '+'}{formatMoney(Math.abs(previewSignedAmount))}
               </p>
             </div>
             <div className="flex items-center gap-2"><Switch checked={form.applies_always} onCheckedChange={v => setForm(p => ({ ...p, applies_always: v }))} /><Label className="text-xs">Apply to all orders automatically</Label></div>

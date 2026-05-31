@@ -16,6 +16,7 @@ import { formatShippingAddress } from '@/lib/address';
 import { validateVoucherRules } from '@/lib/voucher';
 import PaymentMethodDetailsDialog from '@/components/common/PaymentMethodDetailsDialog';
 import { getPaymentMethodTileImage, isRedirectPaymentMethod } from '@/lib/payment-method';
+import { formatMoney } from '@/lib/money';
 
 const isDynamic = (type: string) => type === 'dynamic' || type === 'lalamove';
 
@@ -316,14 +317,14 @@ export default function CheckoutPage() {
       const submittedMessage = [
         '<b>Order Submitted</b>',
         `<b>Order #:</b> ${order.order_number}`,
-        `<b>Subtotal:</b> ₱${subtotal.toFixed(2)}`,
-        `<b>Fees:</b> ₱${(adminFeeTotal + deliveryFeeToPay).toFixed(2)}`,
-        `<b>Discounts:</b> ₱${discountsTotal.toFixed(2)}`,
-        `<b>Grand Total:</b> ₱${total.toFixed(2)}`,
+        `<b>Subtotal:</b> ${formatMoney(subtotal)}`,
+        `<b>Fees:</b> ${formatMoney(adminFeeTotal + deliveryFeeToPay)}`,
+        `<b>Discounts:</b> ${formatMoney(discountsTotal)}`,
+        `<b>Grand Total:</b> ${formatMoney(total)}`,
         deliveryFeeMode === 'upon_fulfillment'
-          ? `<b>Delivery Fee:</b> ₱${deliveryFee.toFixed(2)} (upon fulfillment)`
+          ? `<b>Delivery Fee:</b> ${formatMoney(deliveryFee)} (upon fulfillment)`
           : deliveryFee > 0
-            ? `<b>Delivery Fee:</b> ₱${deliveryFee.toFixed(2)} (paid now)`
+            ? `<b>Delivery Fee:</b> ${formatMoney(deliveryFee)} (paid now)`
             : '<b>Delivery Fee:</b> FREE',
         '',
         'Your order has been received by the store.',
@@ -583,7 +584,7 @@ export default function CheckoutPage() {
                     <p className={`text-[10px] font-bold leading-tight text-center line-clamp-2 ${isSelected ? 'text-primary' : 'text-foreground'}`}>{dp.name}</p>
                     {shownFee != null && (
                       <span className="text-[10px] font-bold text-primary">
-                        ₱{shownFee.toFixed(2)}
+                        {formatMoney(shownFee)}
                         {isSelected && deliveryDistance != null && ` · ${deliveryDistance}km`}
                       </span>
                     )}
@@ -665,8 +666,8 @@ export default function CheckoutPage() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-xs font-bold">x{item.quantity}</p>
-                        <p className="text-[11px] text-muted-foreground">₱{unitPrice.toFixed(2)} each</p>
-                        <p className="text-xs font-black text-primary">₱{lineTotal.toFixed(2)}</p>
+                        <p className="text-[11px] text-muted-foreground">{formatMoney(unitPrice)} each</p>
+                        <p className="text-xs font-black text-primary">{formatMoney(lineTotal)}</p>
                       </div>
                     </div>
                   );
@@ -676,12 +677,12 @@ export default function CheckoutPage() {
 
             <div className="rounded-xl border border-border bg-background p-3 space-y-1.5">
               <h3 className="text-xs font-bold text-foreground mb-1">Pricing Breakdown</h3>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal ({items.length} items)</span><span className="font-semibold">₱{subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Subtotal ({items.length} items)</span><span className="font-semibold">{formatMoney(subtotal)}</span></div>
               {fees.map((f, i) => (
                 <div key={i} className="flex justify-between text-xs">
                   <span className="text-muted-foreground">{f.name}</span>
                   <span className={`font-semibold ${f.category === 'discount' ? 'text-green-600' : ''}`}>
-                    {f.category === 'discount' ? '-' : '+'}₱{f.amount.toFixed(2)}
+                    {f.category === 'discount' ? '-' : '+'}{formatMoney(f.amount)}
                   </span>
                 </div>
               ))}
@@ -690,48 +691,48 @@ export default function CheckoutPage() {
                   Delivery{deliveryDistance != null ? ` (${deliveryDistance}km)` : ''}
                   {trafficActive && <span className="text-amber-600 font-bold">[Traffic]</span>}
                 </span>
-                <span className="font-semibold">{isCalculatingFee ? '...' : deliveryFeeMode === 'pay_now' ? `₱${deliveryFee.toFixed(2)}` : 'Upon Fulfillment'}</span>
+                <span className="font-semibold">{isCalculatingFee ? '...' : deliveryFeeMode === 'pay_now' ? formatMoney(deliveryFee) : 'Upon Fulfillment'}</span>
               </div>
               {deliveryBreakdown && (
                 <div className="space-y-1 pt-1">
                   {typeof deliveryBreakdown.base === 'number' && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground">Base fare</span>
-                      <span>₱{deliveryBreakdown.base.toFixed(2)}</span>
+                      <span>{formatMoney(deliveryBreakdown.base)}</span>
                     </div>
                   )}
                   {typeof deliveryBreakdown.first_fee === 'number' && deliveryBreakdown.first_fee > 0 && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground">Distance charge</span>
-                      <span>₱{deliveryBreakdown.first_fee.toFixed(2)}</span>
+                      <span>{formatMoney(deliveryBreakdown.first_fee)}</span>
                     </div>
                   )}
                   {typeof deliveryBreakdown.extra_fee === 'number' && deliveryBreakdown.extra_fee > 0 && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground">Extra distance</span>
-                      <span>₱{deliveryBreakdown.extra_fee.toFixed(2)}</span>
+                      <span>{formatMoney(deliveryBreakdown.extra_fee)}</span>
                     </div>
                   )}
                   {typeof deliveryBreakdown.traffic_fee === 'number' && deliveryBreakdown.traffic_fee > 0 && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground">Traffic surcharge</span>
-                      <span>₱{deliveryBreakdown.traffic_fee.toFixed(2)}</span>
+                      <span>{formatMoney(deliveryBreakdown.traffic_fee)}</span>
                     </div>
                   )}
                   {typeof deliveryBreakdown.platform_fee === 'number' && deliveryBreakdown.platform_fee > 0 && (
                     <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground">Platform fee</span>
-                      <span>₱{deliveryBreakdown.platform_fee.toFixed(2)}</span>
+                      <span>{formatMoney(deliveryBreakdown.platform_fee)}</span>
                     </div>
                   )}
                 </div>
               )}
               {voucherDiscount > 0 && (
-                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher ({appliedVoucher?.code})</span><span className="font-semibold text-green-600">-₱{voucherDiscount.toFixed(2)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Voucher ({appliedVoucher?.code})</span><span className="font-semibold text-green-600">-{formatMoney(voucherDiscount)}</span></div>
               )}
               <div className="flex justify-between pt-2 border-t border-border">
                 <span className="text-sm font-bold">Total</span>
-                <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
+                <span className="text-sm font-black text-primary">{formatMoney(total)}</span>
               </div>
               {deliveryFeeMode === 'upon_fulfillment' && (
                 <div className="flex justify-between text-xs pt-1">
@@ -759,22 +760,22 @@ export default function CheckoutPage() {
             <h3 className="text-xs font-bold text-foreground mb-1">Final Recap</h3>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-semibold">₱{subtotal.toFixed(2)}</span>
+              <span className="font-semibold">{formatMoney(subtotal)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Fees</span>
               <span className="font-semibold">
-                ₱{(adminFeeTotal + deliveryFeeToPay).toFixed(2)}
+                {formatMoney(adminFeeTotal + deliveryFeeToPay)}
                 {deliveryFeeMode === 'upon_fulfillment' && deliveryFee > 0 ? ' (delivery due later)' : ''}
               </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Discounts</span>
-              <span className="font-semibold text-green-600">-₱{discountsTotal.toFixed(2)}</span>
+              <span className="font-semibold text-green-600">-{formatMoney(discountsTotal)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-border">
               <span className="text-sm font-bold">Grand Total</span>
-              <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
+              <span className="text-sm font-black text-primary">{formatMoney(total)}</span>
             </div>
           </div>
           <div className="rounded-xl border border-amber-300 bg-amber-50/80 dark:bg-amber-950/20 p-3 mb-3">
@@ -883,7 +884,7 @@ export default function CheckoutPage() {
       <div className="sticky bottom-0 p-3 border-t border-border bg-background shadow-brand-lg">
         <Button onClick={placeOrder} disabled={isPlacing || isCalculatingFee} className="w-full h-12 btn-gradient text-sm font-bold rounded-xl gap-2">
           {isPlacing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isPlacing ? 'Placing Order...' : `Place Order — ₱${total.toFixed(2)}`}
+          {isPlacing ? 'Placing Order...' : `Place Order — ${formatMoney(total)}`}
         </Button>
       </div>
     </AppLayout>

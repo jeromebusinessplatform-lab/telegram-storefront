@@ -5,6 +5,7 @@ import { ShoppingBag, Users, DollarSign, Package, TrendingUp, Clock } from 'luci
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { Order, OrderStatus } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { formatMoney } from '@/lib/money';
 
 interface StatCard {
   label: string;
@@ -46,7 +47,7 @@ export default function AdminDashboard() {
 
   const statCards: StatCard[] = [
     { label: 'Total Orders', value: stats.orders, icon: ShoppingBag, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Revenue', value: `₱${stats.revenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-50' },
+    { label: 'Revenue', value: formatMoney(stats.revenue), icon: DollarSign, color: 'text-green-600 bg-green-50' },
     { label: 'Customers', value: stats.customers, icon: Users, color: 'text-purple-600 bg-purple-50' },
     { label: 'Active Products', value: stats.products, icon: Package, color: 'text-orange-600 bg-orange-50' },
   ];
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground">{customer?.telegram_first_name ?? 'Customer'}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-xs font-bold">₱{order.total.toFixed(2)}</p>
+                  <p className="text-xs font-bold">{formatMoney(order.total)}</p>
                   <OrderStatusBadge status={order.status as OrderStatus} />
                 </div>
               </div>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search } from 'lucide-react';
+import { formatMoney } from '@/lib/money';
 
 const ALL_STATUSES: { value: string; label: string }[] = [
   { value: 'all', label: 'All Orders' },
@@ -81,7 +82,7 @@ export default function AdminOrdersPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <p className="font-black text-sm">₱{order.total.toFixed(2)}</p>
+                  <p className="font-black text-sm">{formatMoney(order.total)}</p>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
               </div>

@@ -44,6 +44,8 @@ export default function AnnouncementBanner({ announcement, fixed = false }: Anno
   const textStyle = {
     color: announcement.text_color || undefined,
     fontStyle: announcement.font_style === 'italic' ? 'italic' : 'normal',
+    fontSize: announcement.font_size ? `${announcement.font_size}px` : undefined,
+    textAlign: announcement.text_align || 'left',
   };
   const accentStyle = {
     color: announcement.accent_color || undefined,
@@ -63,7 +65,7 @@ export default function AnnouncementBanner({ announcement, fixed = false }: Anno
       <div className={cn('px-3 pt-3', fixed && 'fixed inset-x-0 top-[var(--header-height)] z-30')}>
         <div className={cn('overflow-hidden rounded-2xl border shadow-brand-sm', fontClass, styleClass)}>
           {shouldShowImage && (
-            <div className="relative">
+            <div className="relative" style={{ textAlign: announcement.text_align || 'left' }}>
               <img
                 src={announcement.banner_image_url}
                 alt={announcement.banner_alt || announcement.title || 'Announcement banner'}
@@ -72,7 +74,13 @@ export default function AnnouncementBanner({ announcement, fixed = false }: Anno
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
               {announcement.title && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div
+                  className="absolute bottom-0 left-0 right-0 p-4 text-white"
+                  style={{
+                    fontSize: announcement.font_size ? `${announcement.font_size}px` : undefined,
+                    textAlign: announcement.text_align || 'left',
+                  }}
+                >
                   <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">
                     <Megaphone className="h-3.5 w-3.5" />
                     Announcement
@@ -86,7 +94,10 @@ export default function AnnouncementBanner({ announcement, fixed = false }: Anno
           {shouldShowText && (
             <div className="p-4" style={textStyle}>
               {!shouldShowImage && (
-                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary" style={accentStyle}>
+                <div
+                  className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary"
+                  style={{ ...accentStyle, justifyContent: announcement.text_align === 'center' ? 'center' : announcement.text_align === 'right' ? 'flex-end' : 'flex-start' }}
+                >
                   <Megaphone className="h-3.5 w-3.5" />
                   Announcement
                 </div>
@@ -97,6 +108,7 @@ export default function AnnouncementBanner({ announcement, fixed = false }: Anno
               {announcement.body_markdown && (
                 <div
                   className="announcement-copy"
+                  style={{ textAlign: announcement.text_align || 'left' }}
                   dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(announcement.body_markdown) }}
                 />
               )}

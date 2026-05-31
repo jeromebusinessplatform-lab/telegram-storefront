@@ -2,6 +2,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Order, ReceiptFieldsConfig } from '@/types';
 import { CheckCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatMoney } from '@/lib/money';
 
 interface ReceiptModalProps {
   open: boolean;
@@ -115,7 +116,7 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
                   <span className="flex-1 text-foreground">
                     {item.name}{item.sub_name ? ` · ${item.sub_name}` : item.variant ? ` (${item.variant})` : ''} x{item.quantity}
                   </span>
-                  <span className="font-semibold ml-2">₱{(item.price * item.quantity).toFixed(2)}</span>
+                  <span className="font-semibold ml-2">{formatMoney(item.price * item.quantity)}</span>
                 </div>
               ))}
             </div>
@@ -124,26 +125,26 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
           <div className="border-t border-dashed border-border pt-3 space-y-1 text-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-semibold">₱{order.subtotal.toFixed(2)}</span>
+              <span className="font-semibold">{formatMoney(order.subtotal)}</span>
             </div>
             {config.show_fees && order.fees_applied?.map((fee, i) => (
               <div key={i} className="flex justify-between">
                 <span className="text-muted-foreground">{fee.name}</span>
                 <span className={`font-semibold ${fee.category === 'discount' ? 'text-green-600' : ''}`}>
-                  {fee.category === 'discount' ? '-' : '+'}₱{fee.amount.toFixed(2)}
+                  {fee.category === 'discount' ? '-' : '+'}{formatMoney(fee.amount)}
                 </span>
               </div>
             ))}
             {config.show_delivery_fee && order.delivery_fee > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Delivery Fee</span>
-                <span className="font-semibold">₱{order.delivery_fee.toFixed(2)}</span>
+                <span className="font-semibold">{formatMoney(order.delivery_fee)}</span>
               </div>
             )}
             {config.show_voucher && order.voucher_discount > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Voucher ({order.voucher_code})</span>
-                <span className="font-semibold text-green-600">-₱{order.voucher_discount.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">-{formatMoney(order.voucher_discount)}</span>
               </div>
             )}
             {config.show_payment_method && paymentMethod && (
@@ -207,7 +208,7 @@ export default function ReceiptModal({ open, onClose, order, config = DEFAULT_CO
           {config.show_total && (
             <div className="border-t-2 border-border pt-2 flex justify-between">
               <span className="font-bold text-sm">TOTAL</span>
-              <span className="font-black text-base text-primary">₱{order.total.toFixed(2)}</span>
+              <span className="font-black text-base text-primary">{formatMoney(order.total)}</span>
             </div>
           )}
 

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, X, FileText, AlertTriangle, Image as ImageIcon, Download } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { formatShippingAddress } from '@/lib/address';
+import { formatMoney } from '@/lib/money';
 
 const STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -234,7 +235,7 @@ export default function AdminOrderDetailPage() {
   const shippingAddr = order.shipping_address;
   const isDispatched = status === 'dispatched';
   const effectiveDeliveryFee = Number.isFinite(Number(deliveryFeeOverride)) ? Math.max(0, Number(deliveryFeeOverride)) : order.delivery_fee;
-  const deliveryFeeLabel = effectiveDeliveryFee <= 0 ? 'FREE' : `₱${effectiveDeliveryFee.toFixed(2)}`;
+  const deliveryFeeLabel = effectiveDeliveryFee <= 0 ? 'FREE' : formatMoney(effectiveDeliveryFee);
   const feeDiff = effectiveDeliveryFee - order.delivery_fee;
   const liveTotal = Math.max(0, order.total + feeDiff);
 
@@ -298,14 +299,14 @@ export default function AdminOrderDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs">x{item.quantity}</p>
-                  <p className="text-xs font-bold">₱{(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-xs font-bold">{formatMoney(item.price * item.quantity)}</p>
                 </div>
               </div>
             ))}
           </div>
           <div className="border-t border-border mt-3 pt-3 space-y-1 text-xs">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>₱{order.subtotal.toFixed(2)}</span></div>
-            {order.fees_applied?.map((f,i) => <div key={i} className="flex justify-between"><span className="text-muted-foreground">{f.name}</span><span className={f.category==='discount'?'text-green-600':''}>{f.category==='discount'?'-':'+'}₱{f.amount.toFixed(2)}</span></div>)}
+            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatMoney(order.subtotal)}</span></div>
+            {order.fees_applied?.map((f,i) => <div key={i} className="flex justify-between"><span className="text-muted-foreground">{f.name}</span><span className={f.category==='discount'?'text-green-600':''}>{f.category==='discount'?'-':'+'}{formatMoney(f.amount)}</span></div>)}
             {/* Editable Delivery Fee */}
             <div className="flex items-center justify-between gap-3 py-1.5 border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20 rounded-lg px-2 mt-1">
               <div className="flex items-center gap-1.5 flex-1">
@@ -326,12 +327,12 @@ export default function AdminOrderDetailPage() {
             </div>
             {effectiveDeliveryFee !== order.delivery_fee && (
               <p className="text-[10px] text-amber-600 text-right">
-                Original: ₱{order.delivery_fee.toFixed(2)} → New total: ₱{liveTotal.toFixed(2)}
+                Original: {formatMoney(order.delivery_fee)} → New total: {formatMoney(liveTotal)}
               </p>
             )}
-            {order.voucher_discount > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Voucher</span><span className="text-green-600">-₱{order.voucher_discount.toFixed(2)}</span></div>}
+            {order.voucher_discount > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Voucher</span><span className="text-green-600">-{formatMoney(order.voucher_discount)}</span></div>}
             <div className="flex justify-between text-xs"><span className="text-muted-foreground">Delivery Fee</span><span className="font-semibold">{deliveryFeeLabel}</span></div>
-            <div className="flex justify-between font-bold text-sm border-t border-border pt-1"><span>Total</span><span className="text-primary">₱{liveTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-sm border-t border-border pt-1"><span>Total</span><span className="text-primary">{formatMoney(liveTotal)}</span></div>
           </div>
         </div>
 

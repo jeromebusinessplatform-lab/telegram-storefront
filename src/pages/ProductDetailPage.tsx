@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ShoppingCart, Minus, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
+import { formatMoney } from '@/lib/money';
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +55,8 @@ export default function ProductDetailPage() {
   }
 
   const images = product.images?.length ? product.images : ['/placeholder.svg'];
+  const isOnSale = product.is_on_sale && product.sale_price != null;
+  const effectivePrice = isOnSale ? product.sale_price : product.price;
 
   const handleAddToCart = () => {
     addItem({
@@ -61,7 +64,7 @@ export default function ProductDetailPage() {
       product_name: product.name,
       sub_name: product.sub_name,
       product_image: images[0],
-      price: product.price,
+      price: effectivePrice ?? product.price,
       quantity,
     });
     toast({ description: `Added ${quantity}x ${product.name} to cart!` });
@@ -80,6 +83,11 @@ export default function ProductDetailPage() {
               className="w-full h-full object-cover"
               onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
             />
+            {isOnSale && (
+              <div className="absolute left-3 top-3 rounded-full bg-primary px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground shadow-brand-sm ring-1 ring-primary/20">
+                On Sale
+              </div>
+            )}
             {images.length > 1 && (
               <>
                 <button
@@ -111,20 +119,20 @@ export default function ProductDetailPage() {
               {product.sub_name && (
                 <p className="text-sm text-muted-foreground mt-0.5">{product.sub_name}</p>
               )}
-              {product.categories && (
-                <span className="text-[11px] text-primary font-semibold bg-primary-light px-2 py-0.5 rounded-full inline-block mt-1">
-                  {(product.categories as {name: string}).name}
-                </span>
-              )}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-primary">₱{product.price.toFixed(2)}</span>
+            <div className="flex items-end justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {isOnSale ? (
+                  <>
+                    <span className="text-sm text-muted-foreground line-through">{formatMoney(product.price)}</span>
+                    <span className="text-2xl font-black text-primary">{formatMoney(effectivePrice ?? product.price)}</span>
+                  </>
+                ) : (
+                  <span className="text-2xl font-black text-primary">{formatMoney(effectivePrice ?? product.price)}</span>
+                )}
+              </div>
               <span className="text-xs text-muted-foreground">
-                {product.stock === 0
-                  ? 'Out of stock'
-                  : product.show_stock
-                    ? `${product.stock} in stock`
-                    : 'In stock'}
+                {product.stock === 0 ? 'Out of stock' : `Stocks left: ${product.stock}`}
               </span>
             </div>
 
@@ -159,7 +167,7 @@ export default function ProductDetailPage() {
             className="w-full h-12 btn-gradient text-sm font-bold gap-2 rounded-xl"
           >
             <ShoppingCart className="w-4 h-4" />
-            {product.stock === 0 ? 'Out of Stock' : `Add to Cart — ₱${(product.price * quantity).toFixed(2)}`}
+            {product.stock === 0 ? 'Out of Stock' : `Add to Cart — ${formatMoney((effectivePrice ?? product.price) * quantity)}`}
           </Button>
         </div>
       </div>

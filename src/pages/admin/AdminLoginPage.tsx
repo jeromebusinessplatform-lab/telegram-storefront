@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useGlobalDesign } from '@/contexts/GlobalDesignContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Eye, EyeOff } from 'lucide-react';
@@ -8,6 +9,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { login, isVerifying, error, isAdmin } = useAdmin();
+  const { logoUrl } = useGlobalDesign();
   const [code, setCode] = useState('');
   const [show, setShow] = useState(false);
 
@@ -26,7 +28,7 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto mb-4 shadow-brand-glow">
-            <span className="text-white text-xl font-black">PC</span>
+            <img src={logoUrl} alt="Prime Core logo" className="h-10 w-10 object-contain" />
           </div>
           <h1 className="text-2xl font-black text-foreground">PRIME CORE</h1>
           <p className="text-sm text-muted-foreground mt-1">Admin Panel</p>

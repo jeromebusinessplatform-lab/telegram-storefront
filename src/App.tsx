@@ -5,6 +5,7 @@ import { routers } from "./router";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
+import { GlobalDesignProvider } from "@/contexts/GlobalDesignContext";
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter(routers);
@@ -25,11 +26,13 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AdminProvider>
         <AuthProvider>
-          <CartProvider>
-            <Suspense fallback={<AppLoading />}>
-              <RouterProvider router={router} />
-            </Suspense>
-          </CartProvider>
+          <GlobalDesignProvider>
+            <CartProvider>
+              <Suspense fallback={<AppLoading />}>
+                <RouterProvider router={router} />
+              </Suspense>
+            </CartProvider>
+          </GlobalDesignProvider>
         </AuthProvider>
       </AdminProvider>
     </QueryClientProvider>

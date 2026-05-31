@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Bell } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGlobalDesign } from '@/contexts/GlobalDesignContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,6 +16,7 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { customer } = useAuth();
+  const { logoUrl } = useGlobalDesign();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export default function Header({ storeName = 'PRIME CORE', showBack, title }: He
         </button>
       ) : (
         <div className="flex items-center gap-2 min-w-0">
-          <img src="/prime-core-logo.svg" alt="Prime Core logo" className="h-7 w-auto object-contain" />
+          <img src={logoUrl} alt="Prime Core logo" className="h-7 w-auto object-contain" />
           <span className="section-font text-[8px] text-foreground">{title ?? storeName}</span>
         </div>
       )}

@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Voucher } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { validateVoucherRules } from '@/lib/voucher';
+import { formatMoney } from '@/lib/money';
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, clearCart } = useCart();
@@ -70,7 +71,7 @@ export default function CartPage() {
       return;
     }
     if (subtotal < v.min_order_amount) {
-      setVoucherError(`Minimum order of ₱${v.min_order_amount.toFixed(2)} required`);
+      setVoucherError(`Minimum order of ${formatMoney(v.min_order_amount)} required`);
       setIsApplying(false);
       return;
     }
@@ -129,7 +130,7 @@ export default function CartPage() {
                   {(item.sub_name || item.variant) && (
                     <p className="text-[11px] text-muted-foreground mt-0.5">{item.sub_name ?? item.variant?.option}</p>
                   )}
-                  <p className="text-sm font-black text-primary mt-1">₱{unitPrice.toFixed(2)}</p>
+                  <p className="text-sm font-black text-primary mt-1">{formatMoney(unitPrice)}</p>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1.5 bg-muted rounded-lg p-0.5">
                       <button
@@ -194,17 +195,17 @@ export default function CartPage() {
           <div className="bg-card rounded-xl p-3 border border-border shadow-brand-sm space-y-1.5">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-semibold">₱{subtotal.toFixed(2)}</span>
+              <span className="font-semibold">{formatMoney(subtotal)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Discount</span>
-                <span className="font-semibold text-green-600">-₱{discount.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">-{formatMoney(discount)}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-border pt-1.5">
               <span className="text-sm font-bold">Total</span>
-              <span className="text-sm font-black text-primary">₱{total.toFixed(2)}</span>
+              <span className="text-sm font-black text-primary">{formatMoney(total)}</span>
             </div>
           </div>
       </div>
@@ -214,7 +215,7 @@ export default function CartPage() {
           onClick={() => navigate('/checkout', { state: { voucher: appliedVoucher } })}
           className="w-full h-12 btn-gradient text-sm font-bold rounded-xl"
         >
-          Checkout — ₱{total.toFixed(2)}
+          Checkout — {formatMoney(total)}
         </Button>
       </div>
     </AppLayout>

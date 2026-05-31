@@ -108,6 +108,8 @@ export interface Product {
   sub_name?: string;
   description?: string;
   price: number;
+  sale_price?: number | null;
+  is_on_sale?: boolean;
   images: string[];
   category_id?: string;
   stock: number;
@@ -348,6 +350,23 @@ export interface StoreInfo {
   currency_symbol: string;
 }
 
+export interface GlobalDesignConfig {
+  logo_url: string;
+  primary_color: string;
+  accent_color: string;
+  background_color: string;
+  foreground_color: string;
+  card_color: string;
+  border_color: string;
+  primary_light_color: string;
+  primary_glow_color: string;
+  radius: number;
+  header_height: number;
+  bottom_nav_height: number;
+  body_font_family: 'roboto' | 'condensed';
+  section_font_family: 'roboto' | 'condensed';
+}
+
 export interface AnnouncementConfig {
   enabled: boolean;
   display_mode: 'text' | 'image' | 'both';
@@ -361,8 +380,10 @@ export interface AnnouncementConfig {
   takedown_at?: string;
   font_family?: 'nunito' | 'noto' | 'serif' | 'mono';
   font_style?: 'normal' | 'italic';
+  font_size?: number;
   text_color?: string;
   accent_color?: string;
+  text_align?: 'left' | 'center' | 'right';
   visual_style?: 'clean' | 'soft' | 'bold' | 'outlined';
 }
 

@@ -14,10 +14,27 @@ import { Bold, Italic, List, ListOrdered, Plus, Pencil, Trash2, Package, X, Eye,
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { renderRichTextMarkdown } from '@/lib/rich-text';
+import { formatMoney } from '@/lib/money';
 
 const EMPTY_PRODUCT = {
-  name: '', sub_name: '', description: '', price: '', stock: '',
-  category_id: '', is_active: true, show_stock: false, images: [] as string[], sort_order: 0,
+  name: '',
+  sub_name: '',
+  description: '',
+  price: '',
+  sale_price: '',
+  stock: '',
+  category_id: '',
+  is_active: true,
+  is_on_sale: false,
+  show_stock: false,
+  images: [] as string[],
+  sort_order: 0,
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== 'object') return 'Unknown error';
+  const { message, details, hint, code } = error as { message?: string; details?: string; hint?: string; code?: string };
+  return [message, details, hint, code ? `code: ${code}` : null].filter(Boolean).join(' | ') || 'Unknown error';
 };
 
 export default function AdminProductsPage() {
@@ -55,7 +72,10 @@ export default function AdminProductsPage() {
     setForm({
       name: p.name, sub_name: p.sub_name ?? '', description: p.description ?? '',
       price: String(p.price), stock: String(p.stock), category_id: p.category_id ?? '',
-      is_active: p.is_active, show_stock: p.show_stock ?? false,
+      sale_price: p.sale_price != null ? String(p.sale_price) : '',
+      is_active: p.is_active,
+      is_on_sale: p.is_on_sale ?? false,
+      show_stock: p.show_stock ?? false,
       images: p.images ?? [], sort_order: p.sort_order,
     });
     setShowForm(true);
@@ -102,33 +122,46 @@ export default function AdminProductsPage() {
     if (!form.name.trim() || !form.price) {
       toast({ description: 'Name and price are required', variant: 'destructive' }); return;
     }
+    if (form.is_on_sale && !form.sale_price) {
+      toast({ description: 'Sale price is required when the product is on sale', variant: 'destructive' });
+      return;
+    }
     setIsSaving(true);
-    const payload = {
+    const basePayload = {
       name: form.name.trim(),
       sub_name: form.sub_name.trim() || null,
       description: form.description.trim() || null,
       price: parseFloat(form.price),
+      sale_price: form.is_on_sale && form.sale_price ? parseFloat(form.sale_price) : null,
+      is_on_sale: form.is_on_sale,
       stock: parseInt(form.stock) || 0,
       category_id: form.category_id || null,
       is_active: form.is_active,
       show_stock: form.show_stock,
       images: form.images,
-      variants: [],
       sort_order: form.sort_order,
     };
     try {
       if (editProduct) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editProduct.id);
+        const payload = {
+          ...basePayload,
+          variants: editProduct.variants ?? [],
+        };
+        const { error } = await supabase.from('products').update(payload).eq('id', editProduct.id).select('id').maybeSingle();
         if (error) throw error;
         toast({ description: 'Product updated!' });
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const payload = {
+          ...basePayload,
+          variants: [],
+        };
+        const { error } = await supabase.from('products').insert(payload).select('id').maybeSingle();
         if (error) throw error;
         toast({ description: 'Product added!' });
       }
       await fetchAll(); setShowForm(false);
     } catch (err) {
-      toast({ description: `Failed: ${(err as { message?: string })?.message ?? 'Unknown error'}`, variant: 'destructive' });
+      toast({ description: `Failed: ${getErrorMessage(err)}`, variant: 'destructive' });
     } finally { setIsSaving(false); }
   };
 
@@ -142,6 +175,7 @@ export default function AdminProductsPage() {
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
   const displayCategories = categories.filter(c => c.name !== 'All');
+  const getDisplayPrice = (prod: Product) => (prod.is_on_sale && prod.sale_price != null ? prod.sale_price : prod.price);
 
   return (
     <AdminLayout title="Products">
@@ -161,10 +195,20 @@ export default function AdminProductsPage() {
               <img src={prod.images?.[0] || '/placeholder.svg'} alt={prod.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-muted" onError={e=>{(e.target as HTMLImageElement).src='/placeholder.svg';}} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground line-clamp-1">{prod.name}{prod.sub_name ? <span className="text-muted-foreground font-normal"> · {prod.sub_name}</span> : null}</p>
-                <p className="text-xs text-primary font-bold">₱{prod.price.toFixed(2)}</p>
+                <div className="flex items-center gap-2">
+                  {prod.is_on_sale && prod.sale_price != null ? (
+                    <>
+                      <span className="text-xs text-muted-foreground line-through">{formatMoney(prod.price)}</span>
+                      <span className="text-xs text-primary font-bold">{formatMoney(prod.sale_price)}</span>
+                    </>
+                  ) : (
+                    <p className="text-xs text-primary font-bold">{formatMoney(getDisplayPrice(prod))}</p>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${prod.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{prod.is_active ? 'Active' : 'Hidden'}</span>
                   <span className="text-[10px] text-muted-foreground">Stock: {prod.stock}</span>
+                  {prod.is_on_sale && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-[0.14em] bg-primary/10 text-primary ring-1 ring-primary/15">On Sale</span>}
                 </div>
               </div>
               <div className="flex gap-1.5">
@@ -192,11 +236,11 @@ export default function AdminProductsPage() {
               <Label className="text-xs">Category</Label>
               <div className="flex gap-2 mt-1">
                 <Select value={form.category_id || 'none'} onValueChange={v => { if (v === '__add__') { setShowAddCat(true); } else { setForm(p => ({ ...p, category_id: v === 'none' ? '' : v })); } }}>
-                  <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No category</SelectItem>
                     {displayCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                    <SelectItem value="__add__" className="text-primary font-semibold">+ Add new category</SelectItem>
+                    <SelectItem value="__add__" className="text-primary font-semibold">+ Add Category</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -232,6 +276,20 @@ export default function AdminProductsPage() {
                 <Input type="number" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: e.target.value }))} placeholder="0" className="mt-1 h-8 text-sm" />
               </div>
             </div>
+
+            <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs cursor-pointer">Mark as on sale</Label>
+              </div>
+              <Switch checked={form.is_on_sale} onCheckedChange={v => setForm(p => ({ ...p, is_on_sale: v }))} />
+            </div>
+
+            {form.is_on_sale && (
+              <div>
+                <Label className="text-xs">Sale Price (₱)</Label>
+                <Input type="number" value={form.sale_price} onChange={e => setForm(p => ({ ...p, sale_price: e.target.value }))} placeholder="0.00" className="mt-1 h-8 text-sm" />
+              </div>
+            )}
 
             {/* ── Show Stock Toggle ── */}
             <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
