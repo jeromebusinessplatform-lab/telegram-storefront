@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Shield, Bell, Globe, Download, Eye, EyeOff, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 
 export default function SystemSettingsPage() {
@@ -15,10 +16,11 @@ export default function SystemSettingsPage() {
   const [codeSaved, setCodeSaved] = useState(false);
 
   const saveCode = () => {
-    if (oldCode !== 'PRIME2026ADMIN') return alert('Current code is incorrect');
-    if (newCode.length < 6) return alert('New code must be at least 6 characters');
-    if (newCode !== confirmCode) return alert('Codes do not match');
+    if (oldCode !== 'PRIME2026ADMIN') { toast.error('Current code is incorrect'); return; }
+    if (newCode.length < 6) { toast.error('New code must be at least 6 characters'); return; }
+    if (newCode !== confirmCode) { toast.error('Codes do not match'); return; }
     setCodeSaved(true);
+    toast.success('Admin code updated successfully');
     setTimeout(() => setCodeSaved(false), 2000);
     setOldCode(''); setNewCode(''); setConfirmCode('');
   };

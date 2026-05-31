@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DollarSign, Truck, Package } from 'lucide-react';
+import { toast } from 'sonner';
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 
 export default function ChargeManagementPage() {
@@ -91,7 +92,7 @@ export default function ChargeManagementPage() {
           ))}
         </div>
 
-        <button className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">
+        <button onClick={() => toast.success('Charge settings saved!')} className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">
           Save Charges
         </button>
       </div>

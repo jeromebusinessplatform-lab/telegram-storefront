@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Truck, MapPin, Clock, Plus, X, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 
 const COURIERS = [
@@ -106,7 +107,7 @@ export default function DeliveryManagementPage() {
           </div>
         </div>
 
-        <button className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">Save Settings</button>
+        <button onClick={() => toast.success('Delivery settings saved!')} className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">Save Settings</button>
       </div>
     </div>
   );

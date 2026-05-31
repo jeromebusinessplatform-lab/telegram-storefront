@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Store, Package, BarChart3, CreditCard, Users, Tag, Truck, DollarSign, Megaphone, LifeBuoy, Settings, LogOut, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Shield, Store, Package, BarChart3, CreditCard, Users, Tag, Truck, DollarSign, Megaphone, LifeBuoy, Settings, LogOut, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import { useCart } from '@/context/CartContext';
@@ -165,28 +165,28 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Menu grid */}
+      {/* Menu grid — 2 columns */}
       <div className="px-5 pt-4 pb-6">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-3 px-1">Management</p>
-        <div className="flex flex-col gap-2">
-          {MENU_ITEMS.map((item, i) => <motion.button key={item.path} initial={{
-          opacity: 0,
-          x: -8
-        }} animate={{
-          opacity: 1,
-          x: 0
-        }} transition={{
-          delay: i * 0.04
-        }} onClick={() => navigate(item.path)} className="w-full bg-card border border-border/40 rounded-2xl px-4 py-3.5 flex items-center gap-3 shadow-card text-left">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
-                <item.icon size={17} />
+        <div className="grid grid-cols-2 gap-2.5">
+          {MENU_ITEMS.map((item, i) => (
+            <motion.button
+              key={item.path}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.03 }}
+              onClick={() => navigate(item.path)}
+              className="bg-card border border-border/40 rounded-2xl p-4 flex flex-col items-start gap-2.5 shadow-card text-left active:scale-95 transition-transform"
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
+                <item.icon size={18} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-foreground">{item.label}</p>
-                <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+              <div className="min-w-0 w-full">
+                <p className="text-[11px] font-bold text-foreground leading-tight">{item.label}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5 leading-snug">{item.sub}</p>
               </div>
-              <ChevronRight size={14} className="text-muted-foreground flex-shrink-0" />
-            </motion.button>)}
+            </motion.button>
+          ))}
         </div>
       </div>
     </div>;

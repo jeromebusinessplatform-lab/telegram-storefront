@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Store, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -119,7 +120,7 @@ export default function StoreStatusPage() {
           </div>
         </div>
 
-        <button className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">
+        <button onClick={() => toast.success('Store settings saved!')} className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-semibold shadow-elevated">
           Save Changes
         </button>
       </div>
