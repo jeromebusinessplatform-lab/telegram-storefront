@@ -114,7 +114,8 @@ export default function AdminPage() {
             <div className="w-16 h-16 rounded-2xl bg-hero-gradient flex items-center justify-center mb-4 shadow-elevated">
               <Shield size={28} className="text-primary-foreground text-[26px]" />
             </div>
-            <h1 className="font-bold font-condensed text-foreground text-[16.5px]">ADMINISTRATOR FULL SYSTEM ACCESS</h1>
+            <h1 className="font-bold font-condensed text-center text-[16px] text-[#B20329FF]">ADMINISTRATOR 
+FULL SYSTEM ACCESS</h1>
             <p className="text-muted-foreground mt-1 text-[9.5px]">ENTER YOUR AUTHORIZATION CODE</p>
           </div>
           <div className="relative mb-3">
@@ -169,15 +170,15 @@ export default function AdminPage() {
       <div className="px-5 pt-4 pb-6">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-3 px-1">Management</p>
         <div className="grid grid-cols-2 gap-2.5">
-          {MENU_ITEMS.map((item, i) => (
-            <motion.button
-              key={item.path}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => navigate(item.path)}
-              className="bg-card border border-border/40 rounded-2xl p-4 flex flex-col items-start gap-2.5 shadow-card text-left active:scale-95 transition-transform"
-            >
+          {MENU_ITEMS.map((item, i) => <motion.button key={item.path} initial={{
+          opacity: 0,
+          y: 8
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          delay: i * 0.03
+        }} onClick={() => navigate(item.path)} className="bg-card border border-border/40 rounded-2xl p-4 flex flex-col items-start gap-2.5 shadow-card text-left active:scale-95 transition-transform">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
                 <item.icon size={18} />
               </div>
@@ -185,8 +186,7 @@ export default function AdminPage() {
                 <p className="text-[11px] font-bold text-foreground leading-tight">{item.label}</p>
                 <p className="text-[9px] text-muted-foreground mt-0.5 leading-snug">{item.sub}</p>
               </div>
-            </motion.button>
-          ))}
+            </motion.button>)}
         </div>
       </div>
     </div>;
