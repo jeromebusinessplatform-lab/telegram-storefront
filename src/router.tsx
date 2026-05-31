@@ -8,6 +8,7 @@ import ProfilePage from './pages/ProfilePage';
 import SupportPage from './pages/SupportPage';
 import AdminPage from './pages/AdminPage';
 import NotFound from './pages/NotFound';
+import RouteErrorPage from './pages/RouteErrorPage';
 import StoreStatusPage from './pages/admin/StoreStatusPage';
 import OrderManagementPage from './pages/admin/OrderManagementPage';
 import InventoryPage from './pages/admin/InventoryPage';
@@ -25,6 +26,7 @@ export const routers = [
   {
     path: '/',
     element: <AppLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <ShopPage /> },
       { path: 'product/:id', element: <ProductPage /> },
@@ -51,6 +53,7 @@ export const routers = [
   {
     path: '*',
     element: <NotFound />,
+    errorElement: <RouteErrorPage />,
   },
 ];
 
