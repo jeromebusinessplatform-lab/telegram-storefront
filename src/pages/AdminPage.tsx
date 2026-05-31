@@ -178,7 +178,7 @@ FULL SYSTEM ACCESS</h1>
           y: 0
         }} transition={{
           delay: i * 0.03
-        }} onClick={() => navigate(item.path)} className="bg-card border border-border/40 rounded-2xl p-4 flex flex-col items-start gap-2.5 shadow-card active:scale-95 transition-transform text-center">
+        }} onClick={() => navigate(item.path)} className="bg-card border border-border/40 rounded-2xl p-4 flex flex-col items-start gap-2.5 shadow-card active:scale-95 transition-transform text-left">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
                 <item.icon size={18} className="text-center" />
               </div>
