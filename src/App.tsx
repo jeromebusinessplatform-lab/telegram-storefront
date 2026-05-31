@@ -10,6 +10,7 @@ import { SupportProvider } from "./context/SupportContext";
 import { AdminProvider } from "./context/AdminContext";
 import { StoreStatusProvider } from "./context/StoreStatusContext";
 import { ProductProvider } from "./context/ProductContext";
+import { TelegramAuthProvider } from "./context/TelegramAuthContext";
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter(routers);
@@ -54,6 +55,7 @@ const App = () => {
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        <TelegramAuthProvider>
         <ProductProvider>
         <StoreStatusProvider>
           <CartProvider>
@@ -69,6 +71,7 @@ const App = () => {
           </CartProvider>
         </StoreStatusProvider>
         </ProductProvider>
+        </TelegramAuthProvider>
       </QueryClientProvider>
     </AppErrorBoundary>
   );

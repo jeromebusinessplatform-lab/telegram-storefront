@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Plus, Check, Star } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import type { Product } from '@/data/products';
 import { useCart } from '@/context/CartContext';
+import { fmtPrice } from '@/utils/format';
 
 interface ProductCardProps {
   product: Product;
@@ -22,9 +23,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     setTimeout(() => setJustAdded(false), 1200);
   };
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : null;
+  const isSale = product.badge === 'Sale' && product.originalPrice != null;
+  const stockLabel = product.stock === 0 ? 'Out of stock' : `${product.stock} left`;
+  const stockColor = product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-amber-600' : 'text-muted-foreground';
 
   return (
     <Link to={`/product/${product.id}`}>
@@ -42,40 +43,47 @@ export default function ProductCard({ product }: ProductCardProps) {
           />
           {product.badge && (
             <span className={`absolute top-1.5 left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-              product.badge === 'Sale' ? 'bg-destructive text-destructive-foreground' :
-              product.badge === 'New' ? 'bg-primary text-primary-foreground' :
-              'bg-foreground text-background'
+              product.badge === 'Sale'       ? 'bg-destructive text-destructive-foreground' :
+              product.badge === 'New'        ? 'bg-primary text-primary-foreground' :
+                                              'bg-foreground text-background'
             }`}>
               {product.badge}
-            </span>
-          )}
-          {discount && !product.badge && (
-            <span className="absolute top-1.5 right-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-destructive/90 text-destructive-foreground">
-              -{discount}%
             </span>
           )}
         </div>
 
         {/* Info */}
-        <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1 flex-1">
-          <h3 className="text-[10px] font-semibold text-card-foreground leading-tight line-clamp-2">
+        <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-0.5 flex-1">
+          {/* Product Name */}
+          <h3 className="text-[10px] font-bold text-card-foreground leading-tight line-clamp-1">
             {product.name}
           </h3>
-          <div className="flex items-center gap-0.5">
-            <Star size={8} className="fill-amber-400 text-amber-400" />
-            <span className="text-[9px] font-semibold text-foreground">{product.rating}</span>
-          </div>
-          {/* Price + button — aligned, same height */}
-          <div className="flex items-center justify-between mt-auto pt-0.5 gap-1">
-            <div className="flex flex-col leading-none">
-              <span className="text-[11px] font-bold text-foreground">₱{product.price.toFixed(2)}</span>
-              {product.originalPrice && (
-                <span className="text-[9px] text-muted-foreground line-through leading-none mt-0.5">
-                  ₱{product.originalPrice.toFixed(2)}
-                </span>
+
+          {/* Sub-Name */}
+          {product.subName && (
+            <p className="text-[9px] text-muted-foreground leading-tight line-clamp-1">
+              {product.subName}
+            </p>
+          )}
+
+          {/* Price row */}
+          <div className="flex items-center justify-between mt-auto pt-1 gap-1">
+            <div className="flex flex-col leading-none min-w-0">
+              {isSale ? (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[11px] font-bold text-foreground">₱{fmtPrice(product.price)}</span>
+                  <span className="text-[9px] text-muted-foreground line-through">₱{fmtPrice(product.originalPrice!)}</span>
+                </div>
+              ) : (
+                <span className="text-[11px] font-bold text-foreground">₱{fmtPrice(product.price)}</span>
               )}
+              {/* Stocks Left */}
+              <span className={`text-[8px] font-medium leading-none mt-0.5 ${stockColor}`}>
+                {stockLabel}
+              </span>
             </div>
-            {/* Button — same height as price block (~20px) */}
+
+            {/* Add button */}
             <motion.button
               onClick={handleAdd}
               whileTap={{ scale: 0.82 }}

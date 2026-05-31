@@ -3,6 +3,7 @@ import { Package, ChevronRight, PackageCheck, Truck, Clock, CheckCircle } from '
 import { useNavigate } from 'react-router-dom';
 import type { Order } from '@/context/CartContext';
 import { useCart } from '@/context/CartContext';
+import { fmtPrice } from '@/utils/format';
 const statusConfig = {
   pending: {
     label: 'Pending',
@@ -79,7 +80,7 @@ function OrderCard({
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <div>
           <p className="text-xs text-muted-foreground">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
-          <p className="text-sm font-bold text-foreground">₱{order.total.toFixed(2)}</p>
+          <p className="text-sm font-bold text-foreground">₱{fmtPrice(order.total)}</p>
         </div>
         <button className="text-primary flex items-center gap-0.5 text-xs font-semibold">
           Details <ChevronRight size={14} />
@@ -136,7 +137,7 @@ export default function OrdersPage() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Total Spent</p>
                 <p className="text-lg font-bold text-primary">
-                  ₱{orders.reduce((s, o) => s + o.total, 0).toFixed(2)}
+                  ₱{fmtPrice(orders.reduce((s, o) => s + o.total, 0))}
                 </p>
               </div>
             </div>

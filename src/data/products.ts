@@ -24,6 +24,7 @@ export interface Bundle {
 export interface Product {
   id: string;
   name: string;
+  subName?: string;
   price: number;
   originalPrice?: number;
   image: string;

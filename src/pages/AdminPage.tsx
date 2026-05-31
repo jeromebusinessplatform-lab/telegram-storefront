@@ -4,6 +4,7 @@ import { Shield, Store, Package, BarChart3, CreditCard, Users, Tag, Truck, Dolla
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import { useCart } from '@/context/CartContext';
+import { fmtPrice } from '@/utils/format';
 const ACCESS_CODE = 'PRIME2026ADMIN';
 const MENU_ITEMS = [{
   icon: Store,
@@ -152,7 +153,7 @@ FULL SYSTEM ACCESS</h1>
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[{
           label: 'Revenue',
-          value: `₱${totalRevenue.toFixed(0)}`
+          value: `₱${fmtPrice(totalRevenue)}`
         }, {
           label: 'Orders',
           value: orders.length

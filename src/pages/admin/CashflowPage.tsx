@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight } fr
 import { motion } from 'framer-motion';
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 import { useCart } from '@/context/CartContext';
+import { fmtPrice } from '@/utils/format';
 
 const PERIODS = ['Today', 'Week', 'Month', 'All Time'] as const;
 
@@ -51,7 +52,7 @@ export default function CashflowPage() {
             <motion.div key={s.label} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
               className="bg-card border border-border/40 rounded-2xl p-3 shadow-card">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${s.color}`}><s.icon size={14} /></div>
-              <p className={`text-sm font-bold font-condensed ${s.color.split(' ')[0]}`}>{s.prefix}{Math.abs(s.value).toFixed(0)}</p>
+              <p className={`text-sm font-bold font-condensed ${s.color.split(' ')[0]}`}>{s.prefix}{fmtPrice(Math.abs(s.value))}</p>
               <p className="text-[9px] text-muted-foreground">{s.label}</p>
             </motion.div>
           ))}
@@ -89,7 +90,7 @@ export default function CashflowPage() {
                   </div>
                 </div>
                 <p className={`text-[12px] font-bold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                  {t.type === 'income' ? '+' : '-'}₱{t.amount.toFixed(2)}
+                  {t.type === 'income' ? '+' : '-'}₱{fmtPrice(t.amount)}
                 </p>
               </div>
             ))}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useStoreStatus } from '@/context/StoreStatusContext';
+import { fmtPrice } from '@/utils/format';
 
 export default function CartPage() {
   const { items, totalPrice, totalItems, updateQty, removeItem, placeOrder, clearCart } = useCart();
@@ -129,7 +130,7 @@ export default function CartPage() {
                 <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
                   {item.product.name}
                 </h3>
-                <p className="text-sm font-bold text-primary mt-1">${item.product.price.toFixed(2)}</p>
+                <p className="text-sm font-bold text-primary mt-1">₱{fmtPrice(item.product.price)}</p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-2 bg-muted rounded-xl p-0.5">
                     <button
@@ -164,7 +165,7 @@ export default function CartPage() {
         <div className="bg-card border border-border/40 rounded-2xl p-4 mb-3 shadow-card">
           <div className="flex justify-between text-sm text-muted-foreground mb-1.5">
             <span>Subtotal</span>
-            <span>₱{totalPrice.toFixed(2)}</span>
+            <span>₱{fmtPrice(totalPrice)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span>Shipping</span>
@@ -172,7 +173,7 @@ export default function CartPage() {
           </div>
           <div className="border-t border-border pt-2 flex justify-between font-bold text-foreground">
             <span>Total</span>
-            <span>₱{totalPrice.toFixed(2)}</span>
+            <span>₱{fmtPrice(totalPrice)}</span>
           </div>
         </div>
 

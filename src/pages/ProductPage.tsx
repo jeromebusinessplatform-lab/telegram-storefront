@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Check } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useProducts } from '@/context/ProductContext';
 import { useCart } from '@/context/CartContext';
 import SuggestedBundle from '@/components/shop/SuggestedBundle';
+import { fmtPrice } from '@/utils/format';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,27 +91,15 @@ export default function ProductPage() {
           {product.category}
         </p>
         <h1 className="text-2xl font-bold text-foreground leading-tight">{product.name}</h1>
-
-        {/* Rating */}
-        <div className="flex items-center gap-2 mt-2">
-          <div className="flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                size={13}
-                className={i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-muted'}
-              />
-            ))}
-          </div>
-          <span className="text-sm font-semibold">{product.rating}</span>
-          <span className="text-sm text-muted-foreground">({product.reviews.toLocaleString()} reviews)</span>
-        </div>
+        {product.subName && (
+          <p className="text-sm text-muted-foreground mt-0.5">{product.subName}</p>
+        )}
 
         {/* Price */}
         <div className="flex items-baseline gap-2 mt-3">
-          <span className="text-2xl font-bold text-foreground">₱{product.price.toFixed(2)}</span>
+          <span className="text-2xl font-bold text-foreground">₱{fmtPrice(product.price)}</span>
           {product.originalPrice && (
-            <span className="text-base text-muted-foreground line-through">₱{product.originalPrice.toFixed(2)}</span>
+            <span className="text-base text-muted-foreground line-through">₱{fmtPrice(product.originalPrice)}</span>
           )}
         </div>
 

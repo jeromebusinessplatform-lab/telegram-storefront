@@ -4,6 +4,7 @@ import { ChevronRight, Package, Clock, Truck, CheckCircle, X } from 'lucide-reac
 import AdminSubHeader from '@/components/admin/AdminSubHeader';
 import { useCart } from '@/context/CartContext';
 import type { Order } from '@/context/CartContext';
+import { fmtPrice } from '@/utils/format';
 
 const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered'] as const;
 const STATUS_STYLES = {
@@ -44,16 +45,16 @@ function OrderDetailSheet({ order, onClose }: { order: Order; onClose: () => voi
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-semibold text-foreground line-clamp-1">{item.product.name}</p>
-                <p className="text-[10px] text-muted-foreground">×{item.quantity} · ${item.product.price.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground">×{item.quantity} · ₱{fmtPrice(item.product.price)}</p>
               </div>
-              <p className="text-[11px] font-bold text-foreground">${(item.product.price * item.quantity).toFixed(2)}</p>
+              <p className="text-[11px] font-bold text-foreground">₱{fmtPrice(item.product.price * item.quantity)}</p>
             </div>
           ))}
         </div>
 
         <div className="border-t border-border pt-3 flex justify-between">
           <span className="text-xs font-semibold text-foreground">Total</span>
-          <span className="text-sm font-bold text-primary">${order.total.toFixed(2)}</span>
+          <span className="text-sm font-bold text-primary">₱{fmtPrice(order.total)}</span>
         </div>
 
         <div>
@@ -118,7 +119,7 @@ export default function OrderManagementPage() {
                   <p className="text-[10px] text-muted-foreground">{order.items.length} item(s) · {new Date(order.date).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[12px] font-bold text-foreground">${order.total.toFixed(2)}</p>
+                  <p className="text-[12px] font-bold text-foreground">₱{fmtPrice(order.total)}</p>
                   <ChevronRight size={14} className="text-muted-foreground ml-auto mt-0.5" />
                 </div>
               </motion.button>
