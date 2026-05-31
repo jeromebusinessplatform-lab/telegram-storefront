@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'Arimo', 'sans-serif'],
-				condensed: ['Roboto Condensed', 'Inter', 'sans-serif'],
+				sans: ['Jost', 'sans-serif'],
+				condensed: ['Roboto Condensed', 'Jost', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

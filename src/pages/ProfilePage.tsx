@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { User, Package, Heart, MapPin, CreditCard, Bell, Shield, ChevronRight, LogOut } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { Link } from 'react-router-dom';
 
 const menuSections = [
   {
@@ -93,22 +92,6 @@ export default function ProfilePage() {
             </div>
           </div>
         ))}
-
-        {/* Admin access */}
-        <div>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Admin</p>
-          <Link to="/admin">
-            <div className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-card">
-              <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-600 bg-rose-50">
-                  <Shield size={15} />
-                </div>
-                <span className="text-sm font-medium text-foreground flex-1">Admin Panel</span>
-                <ChevronRight size={15} className="text-muted-foreground" />
-              </div>
-            </div>
-          </Link>
-        </div>
 
         {/* Logout */}
         <button className="w-full flex items-center justify-center gap-2 py-3.5 text-destructive text-sm font-semibold border border-destructive/30 rounded-2xl hover:bg-destructive/5 transition-colors mb-4">
