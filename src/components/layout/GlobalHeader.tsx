@@ -23,6 +23,8 @@ function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
 function LiveClockBlock() {
   const [now, setNow] = useState(new Date());
   const { status } = useStoreStatus();
@@ -32,27 +34,35 @@ function LiveClockBlock() {
     return () => clearInterval(id);
   }, []);
 
-  const mm = pad(now.getMonth() + 1);
+  const mon = MONTHS[now.getMonth()];
   const dd = pad(now.getDate());
   const yyyy = now.getFullYear();
-  const dateStr = `${mm}${dd}${yyyy}`;
+  const dateStr = `${mon} ${dd}, ${yyyy}`;
 
   let hours = now.getHours();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12 || 12;
-  const timeStr = `${pad(hours)}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const timeStr = `${pad(hours)}:${pad(now.getMinutes())}:${pad(now.getSeconds())} ${ampm}`;
 
   return (
-    <div className="flex flex-col items-end gap-0.5">
-      {/* Date | Time — Roboto Condensed, uppercase */}
-      <span className="font-condensed font-bold uppercase tabular-nums tracking-wider text-foreground leading-none"
-        style={{ fontSize: '11px' }}>
-        {dateStr}&nbsp;|&nbsp;{timeStr}&nbsp;{ampm}
-      </span>
-      {/* Store status — Jost/Futura, uppercase, bold, color-coded */}
+    <div className="flex flex-col items-end">
+      {/* Date | Time */}
       <span
-        className={`font-bold uppercase tracking-widest leading-none ${STATUS_COLORS[status]}`}
-        style={{ fontSize: '8px', fontFamily: 'Jost, sans-serif' }}>
+        className="font-condensed font-bold uppercase tabular-nums text-foreground leading-tight whitespace-nowrap"
+        style={{ fontSize: '10.5px', letterSpacing: '0.04em' }}
+      >
+        {dateStr}&nbsp;|&nbsp;{timeStr}
+      </span>
+      {/* Store status — stretched to match width of line above */}
+      <span
+        className={`font-bold uppercase block w-full leading-tight ${STATUS_COLORS[status]}`}
+        style={{
+          fontSize: '7.5px',
+          fontFamily: 'Jost, sans-serif',
+          textAlign: 'justify',
+          textAlignLast: 'justify',
+        }}
+      >
         {STATUS_LABELS[status]}
       </span>
     </div>
