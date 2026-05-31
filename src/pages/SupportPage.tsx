@@ -2,67 +2,82 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MessageCircle, Clock, ChevronDown, Store, LifeBuoy } from 'lucide-react';
 import { useSupportConfig } from '@/context/SupportContext';
-
 function FaqAccordion() {
-  const { config } = useSupportConfig();
+  const {
+    config
+  } = useSupportConfig();
   const [openId, setOpenId] = useState<string | null>(null);
-
-  return (
-    <div className="flex flex-col gap-2">
-      {config.faqItems.map((item, i) => (
-        <motion.div
-          key={item.id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-card"
-        >
-          <button
-            onClick={() => setOpenId(openId === item.id ? null : item.id)}
-            className="w-full flex items-center justify-between px-4 py-3.5 text-left"
-          >
+  return <div className="flex flex-col gap-2">
+      {config.faqItems.map((item, i) => <motion.div key={item.id} initial={{
+      opacity: 0,
+      y: 6
+    }} animate={{
+      opacity: 1,
+      y: 0
+    }} transition={{
+      delay: i * 0.04
+    }} className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-card">
+          <button onClick={() => setOpenId(openId === item.id ? null : item.id)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
             <span className="text-[11px] font-semibold text-foreground leading-snug pr-3">{item.q}</span>
-            <motion.span
-              animate={{ rotate: openId === item.id ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-shrink-0 text-muted-foreground"
-            >
+            <motion.span animate={{
+          rotate: openId === item.id ? 180 : 0
+        }} transition={{
+          duration: 0.2
+        }} className="flex-shrink-0 text-muted-foreground">
               <ChevronDown size={14} />
             </motion.span>
           </button>
           <AnimatePresence>
-            {openId === item.id && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
+            {openId === item.id && <motion.div initial={{
+          height: 0,
+          opacity: 0
+        }} animate={{
+          height: 'auto',
+          opacity: 1
+        }} exit={{
+          height: 0,
+          opacity: 0
+        }} transition={{
+          duration: 0.2
+        }} className="overflow-hidden">
                 <p className="text-[11px] text-muted-foreground leading-relaxed px-4 pb-4 border-t border-border/40 pt-3">
                   {item.a}
                 </p>
-              </motion.div>
-            )}
+              </motion.div>}
           </AnimatePresence>
-        </motion.div>
-      ))}
-    </div>
-  );
+        </motion.div>)}
+    </div>;
 }
-
 export default function SupportPage() {
-  const { config } = useSupportConfig();
-
-  const contactLinks = [
-    { icon: Mail, label: 'Email Us', value: config.email, href: `mailto:${config.email}`, color: 'text-primary bg-primary/10' },
-    { icon: Phone, label: 'Call Support', value: config.phone, href: `tel:${config.phone}`, color: 'text-success bg-success/10' },
-    { icon: MessageCircle, label: 'Telegram', value: config.telegram, href: `https://t.me/${config.telegram.replace('@', '')}`, color: 'text-sky-500 bg-sky-50' },
-    { icon: MessageCircle, label: 'WhatsApp', value: config.whatsapp, href: `https://wa.me/${config.whatsapp.replace(/\D/g, '')}`, color: 'text-emerald-500 bg-emerald-50' },
-  ];
-
-  return (
-    <div className="flex flex-col min-h-full">
+  const {
+    config
+  } = useSupportConfig();
+  const contactLinks = [{
+    icon: Mail,
+    label: 'Email Us',
+    value: config.email,
+    href: `mailto:${config.email}`,
+    color: 'text-primary bg-primary/10'
+  }, {
+    icon: Phone,
+    label: 'Call Support',
+    value: config.phone,
+    href: `tel:${config.phone}`,
+    color: 'text-success bg-success/10'
+  }, {
+    icon: MessageCircle,
+    label: 'Telegram',
+    value: config.telegram,
+    href: `https://t.me/${config.telegram.replace('@', '')}`,
+    color: 'text-sky-500 bg-sky-50'
+  }, {
+    icon: MessageCircle,
+    label: 'WhatsApp',
+    value: config.whatsapp,
+    href: `https://wa.me/${config.whatsapp.replace(/\D/g, '')}`,
+    color: 'text-emerald-500 bg-emerald-50'
+  }];
+  return <div className="flex flex-col min-h-full">
       {/* Hero */}
       <div className="bg-hero-gradient px-5 pt-6 pb-6">
         <div className="flex items-center gap-3">
@@ -83,16 +98,9 @@ export default function SupportPage() {
       <div className="px-5 flex flex-col gap-5 pt-5 pb-6">
         {/* Contact channels */}
         <div>
-          <h2 className="text-sm font-bold text-foreground font-condensed mb-3">Contact Us</h2>
+          <h2 className="font-bold text-foreground font-condensed mb-3 text-center text-[12.638px]">OFFICIAL CONTACT CHANNELS</h2>
           <div className="grid grid-cols-2 gap-2.5">
-            {contactLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-card border border-border/40 rounded-2xl p-3.5 flex flex-col gap-2 shadow-card active:scale-95 transition-transform"
-              >
+            {contactLinks.map(link => <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" className="bg-card border border-border/40 rounded-2xl p-3.5 flex flex-col gap-2 shadow-card active:scale-95 transition-transform">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${link.color}`}>
                   <link.icon size={16} />
                 </div>
@@ -100,8 +108,7 @@ export default function SupportPage() {
                   <p className="text-[11px] font-semibold text-foreground">{link.label}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{link.value}</p>
                 </div>
-              </a>
-            ))}
+              </a>)}
           </div>
         </div>
 
@@ -126,6 +133,5 @@ export default function SupportPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
