@@ -38,6 +38,7 @@ export interface Product {
   // Admin fields
   costing: number;
   stock: number;
+  showStock?: boolean;
   variants: Variant[];
   bundle: Bundle | null;
 }

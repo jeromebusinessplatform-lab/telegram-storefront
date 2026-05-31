@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, Upload, Link, ChevronDown, Package, Check } from 'lucide-react';
+import { X, Plus, Trash2, Upload, Link, ChevronDown, Package, Check, Eye, EyeOff, Bold, Italic, List, ListOrdered } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product, Category, Variant, Bundle, BundleItem } from '@/data/products';
+import { renderRichTextMarkdown } from '@/utils/richText';
 
 interface Props {
   open: boolean;
@@ -34,6 +35,7 @@ export default function ProductFormDrawer({
 }: Props) {
   const isEdit = Boolean(product);
   const fileRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const [tab, setTab]                 = useState<Tab>('Basic Info');
   const [name, setName]               = useState(product?.name ?? '');
@@ -49,6 +51,7 @@ export default function ProductFormDrawer({
   const [badge, setBadge]             = useState<string | undefined>(product?.badge);
   const [variants, setVariants]       = useState<Variant[]>(product?.variants ?? []);
   const [bundle, setBundle]           = useState<Bundle>(product?.bundle ?? emptyBundle());
+  const [showStock, setShowStock]     = useState<boolean>(product?.showStock ?? false);
 
   // Inline add-category flow
   const [addingCat, setAddingCat]     = useState(false);
@@ -81,6 +84,22 @@ export default function ProductFormDrawer({
     toast.success(`Category "${newCatName.trim()}" added`);
   };
 
+  const insertDescriptionText = (snippet: string) => {
+    const textarea = descriptionRef.current;
+    setDescription(current => {
+      if (!textarea) return current ? `${current}\n${snippet}` : snippet;
+      const start = textarea.selectionStart ?? current.length;
+      const end   = textarea.selectionEnd   ?? current.length;
+      const next  = `${current.slice(0, start)}${snippet}${current.slice(end)}`;
+      requestAnimationFrame(() => {
+        const pos = start + snippet.length;
+        textarea.focus();
+        textarea.setSelectionRange(pos, pos);
+      });
+      return next;
+    });
+  };
+
   const handleSave = () => {
     if (!name.trim())                      { toast.error('Product name is required'); return; }
     if (!price || isNaN(Number(price)))    { toast.error('Valid price is required');  return; }
@@ -94,6 +113,7 @@ export default function ProductFormDrawer({
       originalPrice: isSaleBadge && originalPrice ? Number(originalPrice) : undefined,
       costing:       Number(costing) || 0,
       stock:         Number(stock)   || 0,
+      showStock,
       category,
       image:   image || 'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400&h=400&fit=crop',
       inStock: Number(stock) > 0,
@@ -238,11 +258,41 @@ export default function ProductFormDrawer({
                     )}
                   </div>
 
-                  {/* Description */}
+                  {/* Description with rich-text toolbar */}
                   <div>
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Description</label>
-                    <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the product..."
-                      className="w-full bg-muted rounded-xl px-3 py-2.5 text-[11px] text-foreground outline-none resize-none border border-border/40 focus:ring-1 focus:ring-primary/30" />
+                    {/* Toolbar */}
+                    <div className="flex gap-1.5 mb-2 flex-wrap">
+                      {[
+                        { icon: List,          label: 'Bullet',   snippet: '- Bullet item'     },
+                        { icon: ListOrdered,   label: 'Number',   snippet: '1. Numbered item'  },
+                        { icon: Bold,          label: 'Bold',     snippet: '**Bold text**'     },
+                        { icon: Italic,        label: 'Italic',   snippet: '*Italic text*'     },
+                      ].map(({ icon: Icon, label, snippet }) => (
+                        <button key={label} type="button" onClick={() => insertDescriptionText(snippet)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted border border-border/40 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                          <Icon size={11} /> {label}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      ref={descriptionRef}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      rows={4}
+                      placeholder="Describe the product... Use - for bullets, 1. for numbered lists, **bold**, *italic*"
+                      className="w-full bg-muted rounded-xl px-3 py-2.5 text-[11px] text-foreground outline-none resize-none border border-border/40 focus:ring-1 focus:ring-primary/30"
+                    />
+                    {/* Live preview */}
+                    {description.trim() && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                        className="mt-2 rounded-xl border border-border/40 bg-muted/40 p-3 overflow-hidden">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Preview</p>
+                        <div className="text-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-0.5 [&_p]:leading-relaxed [&_p]:text-[11px] [&_li]:text-[11px]"
+                          dangerouslySetInnerHTML={{ __html: renderRichTextMarkdown(description) }}
+                        />
+                      </motion.div>
+                    )}
                   </div>
 
                   {/* Badge Toggles */}
@@ -312,6 +362,18 @@ export default function ProductFormDrawer({
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Stock Quantity</label>
                     <input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="0" min="0" className={INPUT_CLS} />
                   </div>
+
+                  {/* Show stock to customers toggle */}
+                  <button onClick={() => setShowStock(s => !s)}
+                    className="w-full flex items-center justify-between bg-muted rounded-xl px-3 py-2.5 border border-border/40">
+                    <div className="flex items-center gap-2">
+                      {showStock
+                        ? <Eye size={13} className="text-primary flex-shrink-0" />
+                        : <EyeOff size={13} className="text-muted-foreground flex-shrink-0" />}
+                      <span className="text-[11px] font-medium text-foreground">Show remaining stock to customers</span>
+                    </div>
+                    <Toggle on={showStock} onToggle={() => setShowStock(s => !s)} />
+                  </button>
                 </div>
               )}
 

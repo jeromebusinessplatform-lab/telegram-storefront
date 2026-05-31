@@ -24,8 +24,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   const isSale = product.badge === 'Sale' && product.originalPrice != null;
-  const stockLabel = product.stock === 0 ? 'Out of stock' : `${product.stock} left`;
-  const stockColor = product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-amber-600' : 'text-muted-foreground';
+  const outOfStock = product.stock === 0;
+  const stockLabel = outOfStock ? 'Out of stock' : product.showStock ? `${product.stock} left` : null;
+  const stockColor = outOfStock ? 'text-destructive' : product.stock <= 5 ? 'text-amber-600' : 'text-muted-foreground';
 
   return (
     <Link to={`/product/${product.id}`}>
@@ -78,9 +79,11 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <span className="text-[11px] font-bold text-foreground">₱{fmtPrice(product.price)}</span>
               )}
               {/* Stocks Left */}
-              <span className={`text-[8px] font-medium leading-none mt-0.5 ${stockColor}`}>
-                {stockLabel}
-              </span>
+              {stockLabel && (
+                <span className={`text-[8px] font-medium leading-none mt-0.5 ${stockColor}`}>
+                  {stockLabel}
+                </span>
+              )}
             </div>
 
             {/* Add button */}
