@@ -99,7 +99,7 @@ export default function CartPage() {
         const b = STATUS_BANNERS[status as keyof typeof STATUS_BANNERS];
         const BIcon = b.icon;
         return (
-          <div className={`mx-4 mt-3 rounded-2xl border px-4 py-3 flex items-start gap-3 ${b.bg}`}>
+          <div className={`mx-4 mt-3 mb-1 rounded-2xl border px-4 py-3 flex items-start gap-3 ${b.bg}`}>
             <BIcon size={16} className={`${b.color} flex-shrink-0 mt-0.5`} />
             <p className={`text-[11px] font-medium ${b.color} leading-snug`}>{b.msg}</p>
           </div>
@@ -107,7 +107,7 @@ export default function CartPage() {
       })()}
 
       {/* Items */}
-      <div className="flex-1 px-4 flex flex-col gap-3">
+      <div className="flex-1 px-4 pt-3 flex flex-col gap-3">
         <AnimatePresence>
           {items.map((item) => (
             <motion.div
