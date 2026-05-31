@@ -27,6 +27,6 @@ export function StoreStatusProvider({ children }: { children: React.ReactNode })
 
 export function useStoreStatus() {
   const ctx = useContext(StoreStatusContext);
-  if (!ctx) throw new Error('useStoreStatus must be used within StoreStatusProvider');
+  if (!ctx) return { status: 'open' as StoreStatus, statusMessage: '', setStatus: () => {}, setStatusMessage: () => {} };
   return ctx;
 }
