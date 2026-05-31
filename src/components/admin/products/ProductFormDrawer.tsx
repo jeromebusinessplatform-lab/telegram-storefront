@@ -41,6 +41,7 @@ export default function ProductFormDrawer({ open, onClose, product, categories, 
   const [category, setCategory] = useState(product?.category ?? (categories[1]?.id ?? ''));
   const [image, setImage] = useState(product?.image ?? '');
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url');
+  const [badge, setBadge] = useState<string | undefined>(product?.badge);
   const [variants, setVariants] = useState<Variant[]>(product?.variants ?? []);
   const [bundle, setBundle] = useState<Bundle>(product?.bundle ?? emptyBundle());
 
@@ -68,6 +69,7 @@ export default function ProductFormDrawer({ open, onClose, product, categories, 
       category,
       image: image || 'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400&h=400&fit=crop',
       inStock: Number(stock) > 0,
+      badge: badge || undefined,
       variants,
       bundle: bundle.enabled ? bundle : null,
       specs: [],
@@ -207,6 +209,32 @@ export default function ProductFormDrawer({ open, onClose, product, categories, 
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Stock Quantity</label>
                     <input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="0" min="0"
                       className="w-full bg-muted rounded-xl px-3 py-2.5 text-[11px] text-foreground outline-none border border-border/40 focus:ring-1 focus:ring-primary/30" />
+                  </div>
+
+                  {/* Badge Toggles */}
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Product Badge</label>
+                    <div className="flex gap-2">
+                      {(['Sale', 'New', 'Best Seller'] as const).map(b => {
+                        const isActive = badge === b;
+                        const colors: Record<string, string> = {
+                          'Sale': isActive ? 'bg-destructive text-destructive-foreground border-destructive' : 'bg-card text-muted-foreground border-border/40',
+                          'New': isActive ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border/40',
+                          'Best Seller': isActive ? 'bg-foreground text-background border-foreground' : 'bg-card text-muted-foreground border-border/40',
+                        };
+                        return (
+                          <button key={b} onClick={() => setBadge(isActive ? undefined : b)}
+                            className={`flex-1 py-2 rounded-xl text-[10px] font-bold border transition-all ${colors[b]}`}>
+                            {b}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {badge && (
+                      <button onClick={() => setBadge(undefined)} className="mt-1.5 text-[9px] text-muted-foreground underline w-full text-right">
+                        Remove badge
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

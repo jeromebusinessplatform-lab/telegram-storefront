@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Search, ChevronDown, Tag } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
@@ -27,40 +28,41 @@ export default function ShopPage() {
   return (
     <div className="flex flex-col min-h-full">
 
-      {/* ── Fixed Banner — non-scrolling, drop-shadow highlight ── */}
-      {showBanner && (
-        <>
-          <div
-            className="fixed left-0 right-0 z-30 bg-background px-[24px] py-2"
-            style={{ top: 56 }}
+      {/* ── Fixed Banner via Portal — renders outside scroll container so it's always solid ── */}
+      {showBanner && createPortal(
+        <div
+          className="fixed left-0 right-0 z-[39] px-[24px] py-2"
+          style={{ top: 56, backgroundColor: 'hsl(var(--background))' }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-banner-gradient rounded-xl px-4 py-2.5 flex items-center justify-between"
+            style={{ filter: 'drop-shadow(0 6px 18px hsl(199 84% 46% / 0.32))' }}
           >
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-banner-gradient rounded-xl px-4 py-2.5 flex items-center justify-between"
-              style={{ filter: 'drop-shadow(0 6px 18px hsl(199 84% 46% / 0.32))' }}
-            >
-              <div>
-                <div className="flex items-center gap-1 mb-0.5">
-                  <Tag size={10} className="text-primary" />
-                  <p className="text-[9px] font-bold text-primary uppercase tracking-widest">Flash Sale</p>
-                </div>
-                <p className="text-[12px] font-bold text-foreground font-condensed leading-tight">
-                  Up to 40% off selected items
-                </p>
-                <p className="text-[9px] text-muted-foreground mt-0.5">Limited time · Free shipping</p>
+            <div>
+              <div className="flex items-center gap-1 mb-0.5">
+                <Tag size={10} className="text-primary" />
+                <p className="text-[9px] font-bold text-primary uppercase tracking-widest">Flash Sale</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex flex-col items-center justify-center flex-shrink-0 ml-3 border border-primary/20">
-                <span className="text-[13px] font-black text-primary font-condensed leading-none">40%</span>
-                <span className="text-[8px] font-bold text-primary/70">OFF</span>
-              </div>
-            </motion.div>
-          </div>
-          <div style={{ height: BANNER_H }} />
-        </>
+              <p className="text-[12px] font-bold text-foreground font-condensed leading-tight">
+                Up to 40% off selected items
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Limited time · Free shipping</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex flex-col items-center justify-center flex-shrink-0 ml-3 border border-primary/20">
+              <span className="text-[13px] font-black text-primary font-condensed leading-none">40%</span>
+              <span className="text-[8px] font-bold text-primary/70">OFF</span>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
       )}
 
-      {/* ── Search + Category — same horizontal span as the grid ── */}
+      {/* Spacer to push content below the fixed banner */}
+      {showBanner && <div style={{ height: BANNER_H }} />}
+
+      {/* ── Search + Category ── */}
       <div className="px-[24px] mt-3 flex gap-2 items-center">
         <div className="relative flex-1">
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -86,7 +88,7 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* ── Products grid — 3 columns, card edges aligned to nav icons ── */}
+      {/* ── Products grid ── */}
       <div className="px-[24px] mt-3">
         <div className="flex items-center justify-between mb-2.5">
           <h2 className="text-[11px] font-bold text-foreground font-condensed uppercase tracking-wide">

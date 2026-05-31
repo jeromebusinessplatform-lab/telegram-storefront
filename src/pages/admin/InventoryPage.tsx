@@ -196,9 +196,16 @@ export default function InventoryPage() {
                       <Tag size={9} className="text-primary flex-shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-[9px] text-muted-foreground">{categories.find(c => c.id === p.category)?.name ?? p.category}</span>
                     <span className="text-[10px] font-bold text-foreground">₱{p.price.toFixed(0)}</span>
+                    {p.badge && (
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                        p.badge === 'Sale' ? 'bg-destructive/15 text-destructive' :
+                        p.badge === 'New' ? 'bg-primary/15 text-primary' :
+                        'bg-foreground/10 text-foreground'
+                      }`}>{p.badge}</span>
+                    )}
                   </div>
                 </div>
 
