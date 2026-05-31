@@ -47,7 +47,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 gap-2.5 px-4 mt-3">
         {[
           { label: 'Orders', value: orders.length, icon: Package },
-          { label: 'Spent', value: `$${totalSpent.toFixed(2)}`, icon: CreditCard },
+          { label: 'Spent', value: `₱${totalSpent.toFixed(2)}`, icon: CreditCard },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}

@@ -9,6 +9,7 @@ import { CartProvider } from "./context/CartContext";
 import { SupportProvider } from "./context/SupportContext";
 import { AdminProvider } from "./context/AdminContext";
 import { StoreStatusProvider } from "./context/StoreStatusContext";
+import { ProductProvider } from "./context/ProductContext";
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter(routers);
@@ -53,6 +54,7 @@ const App = () => {
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        <ProductProvider>
         <StoreStatusProvider>
           <CartProvider>
             <AdminProvider>
@@ -66,6 +68,7 @@ const App = () => {
             </AdminProvider>
           </CartProvider>
         </StoreStatusProvider>
+        </ProductProvider>
       </QueryClientProvider>
     </AppErrorBoundary>
   );

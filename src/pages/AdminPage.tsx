@@ -152,7 +152,7 @@ FULL SYSTEM ACCESS</h1>
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[{
           label: 'Revenue',
-          value: `$${totalRevenue.toFixed(0)}`
+          value: `₱${totalRevenue.toFixed(0)}`
         }, {
           label: 'Orders',
           value: orders.length

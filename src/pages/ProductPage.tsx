@@ -2,13 +2,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Check } from 'lucide-react';
 import { useState } from 'react';
-import { getById } from '@/data/products';
+import { useProducts } from '@/context/ProductContext';
 import { useCart } from '@/context/CartContext';
+import SuggestedBundle from '@/components/shop/SuggestedBundle';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const product = getById(id ?? '');
+  const { getProductById } = useProducts();
+  const product = getProductById(id ?? '');
   const { addItem, updateQty, removeItem, getItemQty } = useCart();
   const [justAdded, setJustAdded] = useState(false);
   const qty = getItemQty(id ?? '');
@@ -106,9 +108,9 @@ export default function ProductPage() {
 
         {/* Price */}
         <div className="flex items-baseline gap-2 mt-3">
-          <span className="text-2xl font-bold text-foreground">${product.price.toFixed(2)}</span>
+          <span className="text-2xl font-bold text-foreground">₱{product.price.toFixed(2)}</span>
           {product.originalPrice && (
-            <span className="text-base text-muted-foreground line-through">${product.originalPrice.toFixed(2)}</span>
+            <span className="text-base text-muted-foreground line-through">₱{product.originalPrice.toFixed(2)}</span>
           )}
         </div>
 
@@ -133,6 +135,7 @@ export default function ProductPage() {
         )}
 
         {/* CTA */}
+        <SuggestedBundle product={product} />
         <div className="mt-6">
           {qty === 0 ? (
             <motion.button

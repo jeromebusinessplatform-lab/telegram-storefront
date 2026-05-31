@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search, ChevronDown, Tag } from 'lucide-react';
-import { products, categories } from '@/data/products';
+import { useProducts } from '@/context/ProductContext';
 import ProductCard from '@/components/shop/ProductCard';
 
 // Banner height in px — matches the rendered fixed banner
 const BANNER_H = 80;
 
 export default function ShopPage() {
+  const { products, categories } = useProducts();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -18,7 +19,7 @@ export default function ShopPage() {
       list = list.filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
     }
     return list;
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, products]);
 
   const activeCategoryLabel = categories.find((c) => c.id === activeCategory)?.name ?? 'All';
   const showBanner = !searchQuery && activeCategory === 'all';

@@ -79,7 +79,7 @@ function OrderCard({
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <div>
           <p className="text-xs text-muted-foreground">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
-          <p className="text-sm font-bold text-foreground">${order.total.toFixed(2)}</p>
+          <p className="text-sm font-bold text-foreground">₱{order.total.toFixed(2)}</p>
         </div>
         <button className="text-primary flex items-center gap-0.5 text-xs font-semibold">
           Details <ChevronRight size={14} />
@@ -136,7 +136,7 @@ export default function OrdersPage() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Total Spent</p>
                 <p className="text-lg font-bold text-primary">
-                  ${orders.reduce((s, o) => s + o.total, 0).toFixed(2)}
+                  ₱{orders.reduce((s, o) => s + o.total, 0).toFixed(2)}
                 </p>
               </div>
             </div>

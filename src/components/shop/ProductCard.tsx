@@ -68,10 +68,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Price + button — aligned, same height */}
           <div className="flex items-center justify-between mt-auto pt-0.5 gap-1">
             <div className="flex flex-col leading-none">
-              <span className="text-[11px] font-bold text-foreground">${product.price.toFixed(2)}</span>
+              <span className="text-[11px] font-bold text-foreground">₱{product.price.toFixed(2)}</span>
               {product.originalPrice && (
                 <span className="text-[9px] text-muted-foreground line-through leading-none mt-0.5">
-                  ${product.originalPrice.toFixed(2)}
+                  ₱{product.originalPrice.toFixed(2)}
                 </span>
               )}
             </div>

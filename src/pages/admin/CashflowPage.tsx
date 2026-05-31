@@ -44,9 +44,9 @@ export default function CashflowPage() {
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Revenue',  value: revenue,  icon: TrendingUp,   color: 'text-success bg-success/10',  prefix: '$' },
-            { label: 'Expenses', value: expenses, icon: TrendingDown,  color: 'text-destructive bg-destructive/10', prefix: '$' },
-            { label: 'Profit',   value: profit,   icon: DollarSign,   color: profit >= 0 ? 'text-primary bg-primary/10' : 'text-destructive bg-destructive/10', prefix: '$' },
+            { label: 'Revenue',  value: revenue,  icon: TrendingUp,   color: 'text-success bg-success/10',  prefix: '₱' },
+            { label: 'Expenses', value: expenses, icon: TrendingDown,  color: 'text-destructive bg-destructive/10', prefix: '₱' },
+            { label: 'Profit',   value: profit,   icon: DollarSign,   color: profit >= 0 ? 'text-primary bg-primary/10' : 'text-destructive bg-destructive/10', prefix: '₱' },
           ].map((s, i) => (
             <motion.div key={s.label} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
               className="bg-card border border-border/40 rounded-2xl p-3 shadow-card">
@@ -89,7 +89,7 @@ export default function CashflowPage() {
                   </div>
                 </div>
                 <p className={`text-[12px] font-bold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                  {t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}
+                  {t.type === 'income' ? '+' : '-'}₱{t.amount.toFixed(2)}
                 </p>
               </div>
             ))}

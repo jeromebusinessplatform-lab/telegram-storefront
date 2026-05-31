@@ -164,7 +164,7 @@ export default function CartPage() {
         <div className="bg-card border border-border/40 rounded-2xl p-4 mb-3 shadow-card">
           <div className="flex justify-between text-sm text-muted-foreground mb-1.5">
             <span>Subtotal</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span>₱{totalPrice.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span>Shipping</span>
@@ -172,7 +172,7 @@ export default function CartPage() {
           </div>
           <div className="border-t border-border pt-2 flex justify-between font-bold text-foreground">
             <span>Total</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span>₱{totalPrice.toFixed(2)}</span>
           </div>
         </div>
 
