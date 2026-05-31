@@ -49,18 +49,17 @@ function LiveClockBlock() {
       {/* Date | Time */}
       <span
         className="font-condensed font-bold uppercase tabular-nums text-foreground leading-tight whitespace-nowrap"
-        style={{ fontSize: '10.5px', letterSpacing: '0.04em' }}
+        style={{ fontSize: '11.5px', letterSpacing: '0.04em' }}
       >
         {dateStr}&nbsp;|&nbsp;{timeStr}
       </span>
-      {/* Store status — stretched to match width of line above */}
+      {/* Store status — letter-spaced to span width of line above */}
       <span
-        className={`font-bold uppercase block w-full leading-tight ${STATUS_COLORS[status]}`}
+        className={`font-bold uppercase block leading-tight ${STATUS_COLORS[status]}`}
         style={{
-          fontSize: '7.5px',
+          fontSize: '9.5px',
           fontFamily: 'Jost, sans-serif',
-          textAlign: 'justify',
-          textAlignLast: 'justify',
+          letterSpacing: '0.38em',
         }}
       >
         {STATUS_LABELS[status]}
