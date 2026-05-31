@@ -136,8 +136,8 @@ export default function AdminPage() {
       <div className="bg-hero-gradient px-5 pt-5 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-primary-foreground/60 text-[10px] font-medium uppercase tracking-wide">Admin Panel</p>
-            <h1 className="text-primary-foreground font-bold text-lg font-condensed leading-tight">Dashboard</h1>
+            <p className="text-primary-foreground/60 text-[10px] font-medium uppercase tracking-wide">administrator control center</p>
+            <h1 className="text-primary-foreground font-bold text-lg font-condensed leading-tight">DASHBOARD</h1>
           </div>
           <button onClick={() => {
           lock();
