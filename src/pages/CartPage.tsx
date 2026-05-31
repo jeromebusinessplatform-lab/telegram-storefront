@@ -1,16 +1,27 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, PackageCheck } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, PackageCheck, XCircle, WrenchIcon, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 
 export default function CartPage() {
   const { items, totalPrice, totalItems, updateQty, removeItem, placeOrder, clearCart } = useCart();
+  const { status, statusMessage } = useStoreStatus();
   const navigate = useNavigate();
   const [ordering, setOrdering] = useState(false);
   const [ordered, setOrdered] = useState(false);
 
+  const canOrder = status === 'open' || status === 'limited';
+
+  const STATUS_BANNERS = {
+    closed: { icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10 border-destructive/30', msg: 'Store is currently closed. Orders cannot be placed at this time.' },
+    maintenance: { icon: WrenchIcon, color: 'text-slate-600', bg: 'bg-slate-100 border-slate-300', msg: 'System maintenance in progress. All transactions are temporarily disabled.' },
+    limited: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-300', msg: 'Limited operation mode. You can still place orders but delays are expected.' },
+  };
+
   const handleOrder = () => {
+    if (!canOrder) return;
     setOrdering(true);
     setTimeout(() => {
       placeOrder();
@@ -83,6 +94,18 @@ export default function CartPage() {
         <p className="text-sm text-muted-foreground mt-0.5">{totalItems} item{totalItems !== 1 ? 's' : ''}</p>
       </div>
 
+      {/* Store status banner */}
+      {status !== 'open' && STATUS_BANNERS[status as keyof typeof STATUS_BANNERS] && (() => {
+        const b = STATUS_BANNERS[status as keyof typeof STATUS_BANNERS];
+        const BIcon = b.icon;
+        return (
+          <div className={`mx-4 mt-3 rounded-2xl border px-4 py-3 flex items-start gap-3 ${b.bg}`}>
+            <BIcon size={16} className={`${b.color} flex-shrink-0 mt-0.5`} />
+            <p className={`text-[11px] font-medium ${b.color} leading-snug`}>{b.msg}</p>
+          </div>
+        );
+      })()}
+
       {/* Items */}
       <div className="flex-1 px-4 flex flex-col gap-3">
         <AnimatePresence>
@@ -154,13 +177,22 @@ export default function CartPage() {
         </div>
 
         <motion.button
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: canOrder ? 0.97 : 1 }}
           onClick={handleOrder}
-          disabled={ordering}
-          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-elevated disabled:opacity-70"
+          disabled={ordering || !canOrder}
+          className={`w-full py-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-elevated transition-all ${
+            canOrder
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
+          } disabled:opacity-70`}
         >
           {ordering ? (
             <span className="w-4 h-4 rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+          ) : !canOrder ? (
+            <>
+              {status === 'maintenance' ? <WrenchIcon size={16} /> : <XCircle size={16} />}
+              {status === 'maintenance' ? 'System Unavailable' : 'Store is Closed'}
+            </>
           ) : (
             <>
               Place Order

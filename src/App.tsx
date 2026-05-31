@@ -7,6 +7,7 @@ import { routers } from "./router";
 import { CartProvider } from "./context/CartContext";
 import { SupportProvider } from "./context/SupportContext";
 import { AdminProvider } from "./context/AdminContext";
+import { StoreStatusProvider } from "./context/StoreStatusContext";
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter(routers);
@@ -14,17 +15,19 @@ const router = createBrowserRouter(routers);
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <AdminProvider>
-          <SupportProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <RouterProvider router={router} />
-          </TooltipProvider>
-          </SupportProvider>
-        </AdminProvider>
-      </CartProvider>
+      <StoreStatusProvider>
+        <CartProvider>
+          <AdminProvider>
+            <SupportProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <RouterProvider router={router} />
+              </TooltipProvider>
+            </SupportProvider>
+          </AdminProvider>
+        </CartProvider>
+      </StoreStatusProvider>
     </QueryClientProvider>
   );
 };
